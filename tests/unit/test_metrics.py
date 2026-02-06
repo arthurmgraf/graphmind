@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from graphmind.observability.metrics import MetricsCollector, QueryMetric
 
 
@@ -30,9 +32,9 @@ class TestMetricsCollector:
         mc = MetricsCollector()
         mc.record(QueryMetric("q1", 100.0, 0.8, 0, 3, "groq"))
         mc.record(QueryMetric("q2", 200.0, 0.9, 1, 5, "groq"))
-        assert mc.avg_latency_ms == 150.0
-        assert mc.avg_eval_score == 0.85
-        assert mc.retry_rate == 0.5
+        assert mc.avg_latency_ms == pytest.approx(150.0)
+        assert mc.avg_eval_score == pytest.approx(0.85)
+        assert mc.retry_rate == pytest.approx(0.5)
 
     def test_p95_latency(self):
         mc = MetricsCollector()

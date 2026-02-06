@@ -58,17 +58,26 @@ class TestPlannerNode:
 
 class TestSynthesizerNode:
     @pytest.mark.asyncio
-    async def test_generates_answer(self, mock_router):
+    async def test_generates_answer_with_docs(self, mock_router, sample_retrieval_results):
         from graphmind.agents.synthesizer import synthesizer_node
 
         mock_router.ainvoke.return_value.content = "Synthesized answer."
         state = _make_state(
-            documents=[],
+            documents=sample_retrieval_results,
             sub_questions=["What is LangGraph?"],
         )
         result = await synthesizer_node(state, router=mock_router)
         assert "generation" in result
         assert result["generation"] == "Synthesized answer."
+
+    @pytest.mark.asyncio
+    async def test_returns_fallback_when_no_docs(self, mock_router):
+        from graphmind.agents.synthesizer import synthesizer_node
+
+        state = _make_state(documents=[], sub_questions=["What is LangGraph?"])
+        result = await synthesizer_node(state, router=mock_router)
+        assert "generation" in result
+        assert "could not find" in result["generation"].lower()
 
 
 class TestEvaluatorNode:
