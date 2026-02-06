@@ -102,7 +102,18 @@ def get_orchestrator(
     return _graph
 
 
-async def run_query(question: str, retriever: HybridRetriever | None = None) -> dict:
+async def run_query(
+    question: str,
+    retriever: HybridRetriever | None = None,
+    engine: str = "langgraph",
+) -> dict:
+    if engine == "crewai":
+        from graphmind.crew.crew import run_crew_query
+
+        logger.info("Running query with CrewAI engine")
+        result = await run_crew_query(question=question, retriever=retriever)
+        return result
+
     graph = get_orchestrator(retriever=retriever)
 
     initial_state: AgentState = {

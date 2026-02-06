@@ -19,7 +19,7 @@ async def handle_query(request: QueryRequest) -> QueryResponse:
     start = time.perf_counter()
 
     try:
-        result = await run_query(question=request.question)
+        result = await run_query(question=request.question, engine=request.engine)
     except Exception as exc:
         logger.exception("Query pipeline failed for question: %s", request.question)
         raise HTTPException(

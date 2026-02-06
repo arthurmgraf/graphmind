@@ -22,7 +22,7 @@ Query --> [Planner] --> [Retriever] --> [Synthesizer] --> [Evaluator] -+-> Answe
 | Vector Store | Qdrant | Semantic similarity search |
 | Graph DB | Neo4j | Entity-relationship traversal |
 | Embeddings | Ollama (nomic-embed-text) | 768-dim local embeddings |
-| Agents | LangGraph | Stateful query pipeline with retry loop |
+| Agents | LangGraph + CrewAI | Dual-engine orchestration (state machine + role-based crew) |
 | Safety | NeMo Guardrails | Input/output filtering via Colang flows |
 | Observability | Langfuse | Tracing, cost tracking, evaluation |
 | Evaluation | DeepEval + RAGAS | Faithfulness, relevancy, groundedness metrics |
@@ -91,7 +91,12 @@ curl -X POST http://localhost:8000/api/v1/ingest \
 # Via API
 curl -X POST http://localhost:8000/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is LangGraph?", "top_k": 10}'
+  -d '{"question": "What is LangGraph?", "top_k": 10, "engine": "langgraph"}'
+
+# Use CrewAI engine instead
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Compare CrewAI and LangGraph", "engine": "crewai"}'
 ```
 
 ## Project Structure
@@ -103,6 +108,7 @@ graphmind/
 ├── eval/                   # Benchmark datasets and reports
 ├── src/graphmind/
 │   ├── agents/             # LangGraph agent nodes + orchestrator
+│   ├── crew/               # CrewAI agents, tasks, tools, and crew
 │   ├── api/                # FastAPI routes
 │   ├── dashboard/          # Streamlit web UI
 │   ├── evaluation/         # DeepEval + RAGAS evaluation
@@ -175,6 +181,7 @@ All settings are configurable via `config/settings.yaml` or environment variable
 - [ADR-002](docs/adrs/002-hybrid-retrieval-with-rrf.md) - Hybrid Retrieval with RRF
 - [ADR-003](docs/adrs/003-langgraph-agentic-rag.md) - LangGraph Agentic RAG
 - [ADR-004](docs/adrs/004-mcp-server-integration.md) - MCP Server Integration
+- [ADR-005](docs/adrs/005-crewai-dual-engine.md) - Dual Engine (LangGraph + CrewAI)
 
 ## License
 

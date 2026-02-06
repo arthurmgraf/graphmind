@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [{ name = "Arthur Maia Graf" }]
-keywords = ["ai", "rag", "knowledge-graph", "langgraph", "mcp", "agents"]
+keywords = ["ai", "rag", "knowledge-graph", "langgraph", "crewai", "mcp", "agents"]
 
 dependencies = [
     "fastapi>=0.115.0",
@@ -26,6 +26,7 @@ dependencies = [
     "langchain-google-genai>=2.0.0",
     "langchain-community>=0.3.0",
     "langgraph>=0.2.0",
+    "crewai>=0.86.0",
     "instructor>=1.7.0",
     # Vector + Graph
     "qdrant-client>=1.12.0",

@@ -1,1 +1,1 @@
-"""LangGraph agentic RAG pipeline with self-correction."""
+"""Agentic RAG pipeline with LangGraph and CrewAI orchestration engines."""

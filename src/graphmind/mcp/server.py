@@ -53,6 +53,12 @@ async def list_tools() -> list[Tool]:
                         "description": "Number of retrieval results to consider",
                         "default": 10,
                     },
+                    "engine": {
+                        "type": "string",
+                        "description": "Orchestration engine: 'langgraph' or 'crewai'",
+                        "default": "langgraph",
+                        "enum": ["langgraph", "crewai"],
+                    },
                 },
                 "required": ["question"],
             },
@@ -131,10 +137,11 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> Sequence[Tex
 async def _handle_query(arguments: dict[str, Any]) -> list[TextContent]:
     question: str = arguments["question"]
     top_k: int = arguments.get("top_k", 10)
+    engine: str = arguments.get("engine", "langgraph")
 
-    logger.info("MCP query tool invoked with question: %s (top_k=%d)", question, top_k)
+    logger.info("MCP query tool invoked with question: %s (top_k=%d, engine=%s)", question, top_k, engine)
 
-    result = await run_query(question=question)
+    result = await run_query(question=question, engine=engine)
 
     citations = [
         Citation(**c) if isinstance(c, dict) else c

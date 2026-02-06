@@ -29,16 +29,18 @@ def _render_query_page() -> None:
     st.header("Query the Knowledge Base")
 
     question = st.text_input("Question", placeholder="Ask anything about the ingested documents...")
-    top_k = st.slider("Top K sources", min_value=1, max_value=50, value=10)
+    col_k, col_engine = st.columns(2)
+    top_k = col_k.slider("Top K sources", min_value=1, max_value=50, value=10)
+    engine = col_engine.selectbox("Engine", ["langgraph", "crewai"], index=0)
 
     if st.button("Ask", type="primary"):
         if not question.strip():
             st.warning("Please enter a question.")
             return
 
-        with st.spinner("Querying..."):
+        with st.spinner(f"Querying with {engine}..."):
             try:
-                data = _post("/api/v1/query", {"question": question, "top_k": top_k})
+                data = _post("/api/v1/query", {"question": question, "top_k": top_k, "engine": engine})
             except Exception as exc:
                 st.error(f"API request failed: {exc}")
                 return
