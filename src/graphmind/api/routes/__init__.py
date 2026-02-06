@@ -1,0 +1,1 @@
+"""GraphMind API route definitions."""

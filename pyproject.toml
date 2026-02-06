@@ -1,0 +1,93 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "graphmind"
+version = "0.1.0"
+description = "Autonomous Knowledge Agent Platform - Agentic RAG with Knowledge Graphs, hybrid retrieval, and MCP server"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Arthur Maia Graf" }]
+keywords = ["ai", "rag", "knowledge-graph", "langgraph", "mcp", "agents"]
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "pyyaml>=6.0",
+    "structlog>=24.4.0",
+    "httpx>=0.28.0",
+    # LLM providers
+    "langchain-core>=0.3.0",
+    "langchain-groq>=0.2.0",
+    "langchain-google-genai>=2.0.0",
+    "langchain-community>=0.3.0",
+    "langgraph>=0.2.0",
+    "instructor>=1.7.0",
+    # Vector + Graph
+    "qdrant-client>=1.12.0",
+    "neo4j>=5.26.0",
+    "langchain-neo4j>=0.2.0",
+    # Embeddings
+    "ollama>=0.4.0",
+    # Document processing
+    "unstructured[pdf,md]>=0.16.0",
+    "pymupdf>=1.25.0",
+    # Observability
+    "langfuse>=2.56.0",
+    # Safety
+    "nemoguardrails>=0.11.0",
+    # MCP
+    "mcp>=1.2.0,<2.0",
+    # Dashboard
+    "streamlit>=1.41.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+eval = [
+    "deepeval>=2.0.0",
+    "ragas>=0.2.0",
+    "litellm>=1.55.0",
+    "datasets>=3.2.0",
+]
+
+[project.scripts]
+graphmind = "graphmind.api.main:run"
+graphmind-mcp = "graphmind.mcp.server:main"
+graphmind-ingest = "graphmind.ingestion.pipeline:cli"
+graphmind-eval = "graphmind.evaluation.benchmark:cli"
+graphmind-dashboard = "graphmind.dashboard.app:main"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: requires Docker services running",
+    "eval: evaluation benchmarks (slow)",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/graphmind"]
