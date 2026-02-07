@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 import httpx
 from fastapi import APIRouter
@@ -14,6 +15,14 @@ from graphmind.schemas import GraphStats, HealthResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1")
+
+# ---------------------------------------------------------------------------
+# Cached health state: avoid creating new DB connections on every probe
+# ---------------------------------------------------------------------------
+
+_CACHE_TTL = 15.0  # seconds
+_cached_result: HealthResponse | None = None
+_cached_at: float = 0.0
 
 
 async def _check_neo4j() -> str:
@@ -60,6 +69,12 @@ async def _check_ollama() -> str:
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
+    global _cached_result, _cached_at
+
+    now = time.monotonic()
+    if _cached_result is not None and (now - _cached_at) < _CACHE_TTL:
+        return _cached_result
+
     logger.info("Running health checks")
 
     services: dict[str, str] = {}
@@ -71,12 +86,17 @@ async def health_check() -> HealthResponse:
     all_healthy = all(v == "healthy" for v in services.values())
     status = "ok" if all_healthy else "degraded"
 
-    logger.info("Health check completed: %s", status)
-    return HealthResponse(
+    result = HealthResponse(
         status=status,
         version="0.1.0",
         services=services,
     )
+
+    _cached_result = result
+    _cached_at = now
+
+    logger.info("Health check completed: %s", status)
+    return result
 
 
 @router.get("/stats", response_model=GraphStats)

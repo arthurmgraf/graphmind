@@ -8,6 +8,12 @@ services:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
     mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/readyz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   neo4j:
     image: neo4j:5.26-community
@@ -23,6 +29,12 @@ services:
       - neo4j_data:/data
     restart: unless-stopped
     mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   postgres:
     image: postgres:15-alpine
@@ -56,6 +68,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/public/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   ollama:
     image: ollama/ollama:latest
@@ -65,6 +83,12 @@ services:
       - ollama_data:/root/.ollama
     restart: unless-stopped
     mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   qdrant_data:

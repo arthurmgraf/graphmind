@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def _uuid() -> str:
@@ -23,24 +23,24 @@ class EntityType(str, Enum):
 
 class Entity(BaseModel):
     id: str = Field(default_factory=_uuid)
-    name: str
+    name: str = Field(..., min_length=1, max_length=512)
     type: EntityType
-    description: str = ""
+    description: str = Field(default="", max_length=4096)
     source_chunk_id: str = ""
 
 
 class Relation(BaseModel):
     id: str = Field(default_factory=_uuid)
-    source_id: str
-    target_id: str
-    type: str
-    description: str = ""
+    source_id: str = Field(..., min_length=1)
+    target_id: str = Field(..., min_length=1)
+    type: str = Field(..., min_length=1, max_length=128)
+    description: str = Field(default="", max_length=4096)
 
 
 class DocumentChunk(BaseModel):
     id: str = Field(default_factory=_uuid)
     document_id: str
-    text: str
+    text: str = Field(..., min_length=1)
     index: int = 0
     metadata: dict = Field(default_factory=dict)
     entity_ids: list[str] = Field(default_factory=list)
@@ -54,6 +54,7 @@ class DocumentMetadata(BaseModel):
     chunk_count: int = 0
     entity_count: int = 0
     relation_count: int = 0
+    content_hash: str = ""
     ingested_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -74,9 +75,17 @@ class Citation(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    question: str
-    top_k: int = 10
+    question: str = Field(..., min_length=3, max_length=2000)
+    top_k: int = Field(default=10, ge=1, le=100)
     engine: str = "langgraph"
+
+    @field_validator("engine")
+    @classmethod
+    def _validate_engine(cls, v: str) -> str:
+        allowed = {"langgraph", "crewai"}
+        if v not in allowed:
+            raise ValueError(f"engine must be one of {allowed}")
+        return v
 
 
 class QueryResponse(BaseModel):
@@ -89,8 +98,8 @@ class QueryResponse(BaseModel):
 
 
 class IngestRequest(BaseModel):
-    content: str
-    filename: str
+    content: str = Field(..., min_length=1, max_length=10 * 1024 * 1024)
+    filename: str = Field(..., min_length=1, max_length=512)
     doc_type: str = "markdown"
 
 

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from functools import lru_cache
-from typing import Any
+from typing import Any, Self
 
 import yaml
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
+logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _CONFIG_PATH = _PROJECT_ROOT / "config" / "settings.yaml"
@@ -67,6 +69,8 @@ class AgentSettings(BaseSettings):
 class IngestionSettings(BaseSettings):
     chunk_size: int = 512
     chunk_overlap: int = 50
+    max_document_size_bytes: int = 10 * 1024 * 1024  # 10 MB
+    max_concurrent_chunks: int = 10
     supported_formats: list[str] = Field(
         default=["pdf", "md", "html", "txt", "py", "ts", "js"]
     )
@@ -91,6 +95,12 @@ class Settings(BaseSettings):
     langfuse_host: str = "http://localhost:3000"
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
+
+    api_key: str = ""
+    cors_origins: list[str] = Field(
+        default=["http://localhost:8501", "http://localhost:3000"]
+    )
+    rate_limit_rpm: int = 60
 
     llm_primary: LLMProviderSettings = Field(
         default_factory=lambda: LLMProviderSettings(**_yaml.get("llm", {}).get("primary", {}))
@@ -119,6 +129,17 @@ class Settings(BaseSettings):
     ingestion: IngestionSettings = Field(
         default_factory=lambda: IngestionSettings(**_yaml.get("ingestion", {}))
     )
+
+    @model_validator(mode="after")
+    def _validate_required_secrets(self) -> Self:
+        if not self.groq_api_key and not self.gemini_api_key:
+            logger.warning(
+                "Neither GROQ_API_KEY nor GEMINI_API_KEY is set; "
+                "only local Ollama fallback will be available"
+            )
+        if not self.neo4j_password:
+            logger.warning("NEO4J_PASSWORD is not set; graph operations will fail")
+        return self
 
 
 @lru_cache

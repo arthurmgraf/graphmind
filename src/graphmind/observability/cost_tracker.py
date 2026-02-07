@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+# Pricing per 1 M tokens (USD) — updated 2025-01
 PRICING_PER_1M_TOKENS: dict[str, dict[str, float]] = {
-    "groq": {"input": 0.0, "output": 0.0},
-    "gemini": {"input": 0.0, "output": 0.0},
-    "ollama": {"input": 0.0, "output": 0.0},
+    "groq": {"input": 0.59, "output": 0.79},       # Llama 3.3 70B
+    "gemini": {"input": 0.075, "output": 0.30},     # Gemini 2.0 Flash
+    "ollama": {"input": 0.0, "output": 0.0},        # local — zero cost
 }
 
 

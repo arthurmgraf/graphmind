@@ -136,5 +136,7 @@ async def run_query(
     elapsed_ms = (time.perf_counter() - start) * 1000
 
     result["latency_ms"] = elapsed_ms
+    if not result.get("provider_used"):
+        result["provider_used"] = "groq"
     logger.info("Query completed in %.0fms with score %.2f", elapsed_ms, result["eval_score"])
     return result

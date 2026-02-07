@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import sys
 import uuid
 from typing import Any
@@ -22,6 +23,10 @@ from graphmind.ingestion.loaders import DocumentLoader
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+def _content_hash(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
 class IngestionPipeline:
     def __init__(
         self,
@@ -41,12 +46,25 @@ class IngestionPipeline:
         self._graph_builder = graph_builder
         self._embedder = embedder
         self._vector_retriever = vector_retriever
+        self._semaphore = asyncio.Semaphore(
+            self._settings.ingestion.max_concurrent_chunks
+        )
 
     async def process(
         self, content: str, filename: str, doc_type: str
     ) -> IngestResponse:
+        content_size = len(content.encode("utf-8"))
+        max_size = self._settings.ingestion.max_document_size_bytes
+        if content_size > max_size:
+            raise ValueError(
+                f"Document exceeds maximum size ({content_size} > {max_size} bytes)"
+            )
+
+        doc_hash = _content_hash(content)
         doc_id = str(uuid.uuid4())
-        log = logger.bind(document_id=doc_id, filename=filename, doc_type=doc_type)
+        log = logger.bind(
+            document_id=doc_id, filename=filename, doc_type=doc_type, content_hash=doc_hash
+        )
         log.info("ingestion_started")
 
         text = self._load(content, doc_type, log)
@@ -55,16 +73,32 @@ class IngestionPipeline:
         all_entities: list[Entity] = []
         all_relations: list[Relation] = []
 
-        for chunk in chunks:
-            entities, relations = await self._process_chunk(chunk, log)
+        # Bounded concurrency for chunk processing (LLM calls)
+        async def _bounded_process(chunk: DocumentChunk):
+            async with self._semaphore:
+                return await self._process_chunk(chunk, log)
+
+        results = await asyncio.gather(
+            *[_bounded_process(c) for c in chunks], return_exceptions=True
+        )
+
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                log.error(
+                    "chunk_processing_failed",
+                    chunk_index=i,
+                    error=str(result),
+                )
+                continue
+            entities, relations = result
             all_entities.extend(entities)
             all_relations.extend(relations)
-            chunk.entity_ids = [e.id for e in entities]
+            chunks[i].entity_ids = [e.id for e in entities]
 
         await self._store_vectors(chunks, log)
         await self._store_graph(all_entities, all_relations, log)
         await self._store_metadata(
-            doc_id, filename, doc_type, content, chunks, all_entities, all_relations, log
+            doc_id, filename, doc_type, content, doc_hash, chunks, all_entities, all_relations, log
         )
 
         log.info(
@@ -183,6 +217,7 @@ class IngestionPipeline:
         filename: str,
         doc_type: str,
         content: str,
+        content_hash: str,
         chunks: list[DocumentChunk],
         entities: list[Entity],
         relations: list[Relation],
@@ -196,6 +231,7 @@ class IngestionPipeline:
             chunk_count=len(chunks),
             entity_count=len(entities),
             relation_count=len(relations),
+            content_hash=content_hash,
         )
         log.info("metadata_stored", metadata_id=metadata.id)
 

@@ -34,6 +34,10 @@ class VectorRetriever:
             )
 
     async def index(self, chunk_id: str, vector: list[float], payload: dict) -> None:
+        if len(vector) != self._dimensions:
+            raise ValueError(
+                f"Vector dimension {len(vector)} != expected {self._dimensions}"
+            )
         point = PointStruct(
             id=chunk_id,
             vector=vector,
