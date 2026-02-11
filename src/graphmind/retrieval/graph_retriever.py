@@ -1,19 +1,30 @@
+"""Neo4j graph retriever with DI support for shared driver."""
+
 from __future__ import annotations
 
 import neo4j
-from neo4j import AsyncGraphDatabase
+from neo4j import AsyncDriver, AsyncGraphDatabase
 
 from graphmind.config import Settings, get_settings
 from graphmind.schemas import RetrievalResult
 
 
 class GraphRetriever:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        driver: AsyncDriver | None = None,
+    ) -> None:
         self._settings = settings or get_settings()
-        self._driver: neo4j.AsyncDriver = AsyncGraphDatabase.driver(
-            self._settings.graph_db.uri,
-            auth=(self._settings.graph_db.username, self._settings.neo4j_password),
-        )
+        if driver is not None:
+            self._driver = driver
+            self._owns_driver = False
+        else:
+            self._driver = AsyncGraphDatabase.driver(
+                self._settings.graph_db.uri,
+                auth=(self._settings.graph_db.username, self._settings.neo4j_password),
+            )
+            self._owns_driver = True
         self._database = self._settings.graph_db.database
 
     async def expand(
@@ -100,4 +111,5 @@ class GraphRetriever:
         return results
 
     async def close(self) -> None:
-        await self._driver.close()
+        if self._owns_driver:
+            await self._driver.close()

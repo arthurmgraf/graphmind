@@ -1,0 +1,130 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: graphmind
+
+resources:
+  - ../../
+
+patches:
+  # API deployment: 3 replicas, higher resources, pod anti-affinity
+  - target:
+      kind: Deployment
+      name: graphmind-api
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: graphmind-api
+      spec:
+        replicas: 3
+        template:
+          spec:
+            affinity:
+              podAntiAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 100
+                    podAffinityTerm:
+                      labelSelector:
+                        matchLabels:
+                          app.kubernetes.io/name: graphmind
+                          app.kubernetes.io/component: api
+                      topologyKey: kubernetes.io/hostname
+            containers:
+              - name: api
+                resources:
+                  requests:
+                    cpu: 500m
+                    memory: 1Gi
+                  limits:
+                    cpu: "2"
+                    memory: 2Gi
+            topologySpreadConstraints:
+              - maxSkew: 1
+                topologyKey: topology.kubernetes.io/zone
+                whenUnsatisfiable: DoNotSchedule
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: graphmind
+                    app.kubernetes.io/component: api
+
+  # Worker deployment: 2 replicas, higher resources
+  - target:
+      kind: Deployment
+      name: graphmind-worker
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: graphmind-worker
+      spec:
+        replicas: 2
+        template:
+          spec:
+            containers:
+              - name: worker
+                resources:
+                  requests:
+                    cpu: "1"
+                    memory: 2Gi
+                  limits:
+                    cpu: "4"
+                    memory: 4Gi
+
+  # HPA: production scaling
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: graphmind-api
+    patch: |
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: graphmind-api
+      spec:
+        minReplicas: 3
+        maxReplicas: 15
+
+  # ConfigMap: production-specific values
+  - target:
+      kind: ConfigMap
+      name: graphmind-config
+    patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: graphmind-config
+      data:
+        LOG_LEVEL: "WARNING"
+        ENVIRONMENT: "production"
+        CORS_ORIGINS: "https://graphmind.example.com"
+        RATE_LIMIT_RPM: "120"
+        UVICORN_WORKERS: "4"
+
+  # Ingress: production hostname
+  - target:
+      kind: Ingress
+      name: graphmind-api
+    patch: |
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: graphmind-api
+        annotations:
+          nginx.ingress.kubernetes.io/rate-limit: "100"
+          nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+      spec:
+        tls:
+          - hosts:
+              - graphmind.example.com
+            secretName: graphmind-prod-tls
+        rules:
+          - host: graphmind.example.com
+            http:
+              paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: graphmind-api
+                      port:
+                        name: http

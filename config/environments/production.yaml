@@ -1,0 +1,11 @@
+environment: production
+llm:
+  primary:
+    provider: groq
+    model: llama-3.3-70b-versatile
+    temperature: 0.1
+rate_limit_rpm: 60
+log_format: json
+debug: false
+agents:
+  eval_threshold: 0.7

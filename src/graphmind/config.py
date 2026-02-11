@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import logging
+import structlog
+import os
 from pathlib import Path
 from functools import lru_cache
 from typing import Any, Self
@@ -9,10 +10,11 @@ import yaml
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_CONFIG_PATH = _PROJECT_ROOT / "config" / "settings.yaml"
+_CONFIG_DIR = _PROJECT_ROOT / "config"
+_CONFIG_PATH = _CONFIG_DIR / "settings.yaml"
 
 
 def _load_yaml() -> dict[str, Any]:
@@ -22,7 +24,35 @@ def _load_yaml() -> dict[str, Any]:
     return {}
 
 
-_yaml = _load_yaml()
+def _load_env_profile() -> dict[str, Any]:
+    """Load environment-specific YAML profile (dev / staging / production).
+
+    Set ``GRAPHMIND_ENV`` to one of ``dev``, ``staging``, ``production``
+    (defaults to ``dev``).  The profile is deep-merged on top of the base
+    settings YAML so that per-environment overrides take precedence.
+    """
+    env = os.getenv("GRAPHMIND_ENV", "dev").lower()
+    profile_path = _CONFIG_DIR / "environments" / f"{env}.yaml"
+    if profile_path.exists():
+        with open(profile_path) as f:
+            data = yaml.safe_load(f) or {}
+        logger.info("Loaded environment profile: %s (%s)", env, profile_path)
+        return data
+    logger.debug("No environment profile found for '%s'", env)
+    return {}
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Recursively merge *override* into *base* (mutates *base*)."""
+    for key, value in override.items():
+        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+_yaml = _deep_merge(_load_yaml(), _load_env_profile())
 
 
 class LLMProviderSettings(BaseSettings):

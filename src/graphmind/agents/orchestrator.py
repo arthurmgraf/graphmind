@@ -1,8 +1,14 @@
+"""LangGraph orchestrator for the GraphMind query pipeline.
+
+Builds a state-machine graph: plan → retrieve → synthesize → evaluate → (retry?)
+No module-level global state — the graph is built per-request or injected via DI.
+"""
+
 from __future__ import annotations
 
-import logging
+import structlog
 import time
-from functools import partial
+from functools import lru_cache, partial
 
 from langgraph.graph import END, StateGraph
 
@@ -15,7 +21,7 @@ from graphmind.config import get_settings
 from graphmind.llm_router import LLMRouter, get_llm_router
 from graphmind.retrieval.hybrid_retriever import HybridRetriever
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _should_retry(state: AgentState) -> str:
@@ -89,23 +95,19 @@ def build_graph(
     return workflow.compile()
 
 
-_graph = None
-
-
 def get_orchestrator(
     router: LLMRouter | None = None,
     retriever: HybridRetriever | None = None,
 ):
-    global _graph
-    if _graph is None:
-        _graph = build_graph(router=router, retriever=retriever)
-    return _graph
+    """Build a new graph for the given router/retriever combination."""
+    return build_graph(router=router, retriever=retriever)
 
 
 async def run_query(
     question: str,
     retriever: HybridRetriever | None = None,
     engine: str = "langgraph",
+    router: LLMRouter | None = None,
 ) -> dict:
     if engine == "crewai":
         from graphmind.crew.crew import run_crew_query
@@ -114,7 +116,7 @@ async def run_query(
         result = await run_crew_query(question=question, retriever=retriever)
         return result
 
-    graph = get_orchestrator(retriever=retriever)
+    graph = get_orchestrator(router=router, retriever=retriever)
 
     initial_state: AgentState = {
         "question": question,
@@ -129,6 +131,7 @@ async def run_query(
         "provider_used": "",
         "total_tokens": 0,
         "latency_ms": 0.0,
+        "usage": {},
     }
 
     start = time.perf_counter()

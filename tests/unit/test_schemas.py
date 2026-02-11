@@ -99,4 +99,4 @@ class TestHealthResponse:
     def test_defaults(self):
         hr = HealthResponse()
         assert hr.status == "ok"
-        assert hr.version == "0.1.0"
+        assert hr.version == "0.2.0"

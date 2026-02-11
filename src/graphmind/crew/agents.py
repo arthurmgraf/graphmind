@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import logging
+import structlog
 from typing import Any
 
 from crewai import Agent
 
 from graphmind.crew.tools import EvaluateAnswerTool, GraphExpansionTool, HybridSearchTool
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def create_research_planner(llm: Any = None) -> Agent:

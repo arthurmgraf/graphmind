@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-import logging
+import structlog
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from graphmind.agents.states import AgentState
 from graphmind.llm_router import LLMRouter
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 EVALUATOR_SYSTEM = """You are an answer quality evaluator. Given a question, an answer, and
 the source documents, evaluate the answer on three dimensions.

@@ -1,47 +1,72 @@
+"""Multi-provider LLM router with circuit breaker and cascading fallback.
+
+Supports three providers: Groq → Gemini → Ollama.  Each provider has an
+independent circuit breaker with CLOSED → OPEN → HALF_OPEN state machine.
+"""
+
 from __future__ import annotations
 
-import logging
+import enum
+import structlog
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from functools import lru_cache
+from typing import Any, AsyncIterator
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 
 from graphmind.config import Settings, get_settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Circuit breaker: prevents hammering a provider that is consistently failing
+# Circuit breaker with half-open state
 # ---------------------------------------------------------------------------
+
+class CircuitPhase(enum.Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
 
 @dataclass
-class _CircuitState:
+class CircuitState:
     failures: int = 0
     last_failure: float = 0.0
     open_until: float = 0.0
+    max_failures: int = 5
+    _phase: CircuitPhase = CircuitPhase.CLOSED
 
     def record_failure(self) -> None:
         self.failures += 1
         self.last_failure = time.monotonic()
-        backoff = min(2 ** self.failures, 60)  # cap at 60 s
-        self.open_until = self.last_failure + backoff
+        if self.failures >= self.max_failures:
+            backoff = min(2 ** (self.failures - self.max_failures + 1), 60)
+            self.open_until = self.last_failure + backoff
+            self._phase = CircuitPhase.OPEN
 
     def record_success(self) -> None:
         self.failures = 0
         self.open_until = 0.0
+        self._phase = CircuitPhase.CLOSED
 
     @property
-    def is_open(self) -> bool:
-        if self.open_until == 0.0:
-            return False
-        return time.monotonic() < self.open_until
+    def phase(self) -> CircuitPhase:
+        if self._phase == CircuitPhase.OPEN:
+            if time.monotonic() >= self.open_until:
+                self._phase = CircuitPhase.HALF_OPEN
+        return self._phase
+
+    @property
+    def is_available(self) -> bool:
+        p = self.phase
+        return p in (CircuitPhase.CLOSED, CircuitPhase.HALF_OPEN)
 
 
 # ---------------------------------------------------------------------------
-# Provider metrics: tracks success / failure / latency per provider
+# Provider metrics
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -132,11 +157,11 @@ _PROVIDERS: list[tuple[str, Any]] = [
 
 
 class LLMRouter:
-    def __init__(self, settings: Settings | None = None):
+    def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
         self._cache: dict[str, BaseChatModel] = {}
-        self._circuits: dict[str, _CircuitState] = {
-            name: _CircuitState() for name, _ in _PROVIDERS
+        self._circuits: dict[str, CircuitState] = {
+            name: CircuitState() for name, _ in _PROVIDERS
         }
         self.metrics = RouterMetrics()
 
@@ -144,6 +169,10 @@ class LLMRouter:
         if name not in self._cache:
             self._cache[name] = builder(self._settings)
         return self._cache[name]
+
+    @property
+    def circuit_states(self) -> dict[str, str]:
+        return {name: cs.phase.value for name, cs in self._circuits.items()}
 
     async def ainvoke(
         self, messages: list[BaseMessage], **kwargs: Any
@@ -153,9 +182,11 @@ class LLMRouter:
 
         for name, builder in _PROVIDERS:
             circuit = self._circuits[name]
-            if circuit.is_open:
-                logger.debug("Circuit open for %s, skipping", name)
+            if not circuit.is_available:
+                logger.debug("Circuit %s for %s, skipping", circuit.phase.value, name)
                 continue
+
+            is_probe = circuit.phase == CircuitPhase.HALF_OPEN
 
             t0 = time.perf_counter()
             try:
@@ -165,10 +196,9 @@ class LLMRouter:
                 circuit.record_success()
                 self.metrics.record(name, elapsed, success=True)
                 provider_used = name
-                logger.info(
-                    "LLM response via %s (%.0f ms)", name, elapsed
-                )
-                # Attach provider metadata for downstream cost tracking
+                if is_probe:
+                    logger.info("Half-open probe succeeded for %s, circuit closed", name)
+                logger.info("LLM response via %s (%.0f ms)", name, elapsed)
                 if not hasattr(response, "response_metadata"):
                     response.response_metadata = {}
                 response.response_metadata["provider"] = provider_used
@@ -177,8 +207,10 @@ class LLMRouter:
                 elapsed = (time.perf_counter() - t0) * 1000
                 circuit.record_failure()
                 self.metrics.record(name, elapsed, success=False)
+                if is_probe:
+                    logger.warning("Half-open probe failed for %s, circuit re-opened", name)
                 logger.warning(
-                    "Provider %s failed after %.0f ms: %s", name, elapsed, exc
+                    "Provider %s failed after %.0f ms: %s", name, elapsed, exc,
                 )
                 last_error = exc
                 continue
@@ -187,13 +219,44 @@ class LLMRouter:
             f"All LLM providers exhausted. Last error: {last_error}"
         )
 
+    async def astream(
+        self, messages: list[BaseMessage], **kwargs: Any
+    ) -> AsyncIterator[str]:
+        """Stream tokens from the first available provider."""
+        last_error: Exception | None = None
+
+        for name, builder in _PROVIDERS:
+            circuit = self._circuits[name]
+            if not circuit.is_available:
+                continue
+
+            t0 = time.perf_counter()
+            try:
+                llm = self._get_llm(name, builder)
+                async for chunk in llm.astream(messages, **kwargs):
+                    if hasattr(chunk, "content"):
+                        yield chunk.content
+                elapsed = (time.perf_counter() - t0) * 1000
+                circuit.record_success()
+                self.metrics.record(name, elapsed, success=True)
+                return
+            except Exception as exc:
+                elapsed = (time.perf_counter() - t0) * 1000
+                circuit.record_failure()
+                self.metrics.record(name, elapsed, success=False)
+                last_error = exc
+                continue
+
+        raise RuntimeError(
+            f"All LLM providers exhausted (streaming). Last error: {last_error}"
+        )
+
     def invoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage:
         last_error: Exception | None = None
 
         for name, builder in _PROVIDERS:
             circuit = self._circuits[name]
-            if circuit.is_open:
-                logger.debug("Circuit open for %s, skipping", name)
+            if not circuit.is_available:
                 continue
 
             t0 = time.perf_counter()
@@ -213,7 +276,7 @@ class LLMRouter:
                 circuit.record_failure()
                 self.metrics.record(name, elapsed, success=False)
                 logger.warning(
-                    "Provider %s failed after %.0f ms: %s", name, elapsed, exc
+                    "Provider %s failed after %.0f ms: %s", name, elapsed, exc,
                 )
                 last_error = exc
                 continue
@@ -232,11 +295,7 @@ class LLMRouter:
         return self._get_llm("ollama", _build_ollama)
 
 
-_router: LLMRouter | None = None
-
-
+@lru_cache
 def get_llm_router() -> LLMRouter:
-    global _router
-    if _router is None:
-        _router = LLMRouter()
-    return _router
+    """Singleton LLM router (thread-safe via lru_cache)."""
+    return LLMRouter()

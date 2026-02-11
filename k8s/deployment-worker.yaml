@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphmind-worker
+  namespace: graphmind
+  labels:
+    app.kubernetes.io/name: graphmind
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: graphmind
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: graphmind
+      app.kubernetes.io/component: worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: graphmind
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: graphmind
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: worker
+          image: ghcr.io/graphmind/graphmind:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "graphmind.ingestion.pipeline"]
+          args: ["--mode", "worker"]
+          envFrom:
+            - configMapRef:
+                name: graphmind-config
+            - secretRef:
+                name: graphmind-secrets
+          env:
+            - name: GRAPHMIND_ROLE
+              value: worker
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import graphmind; print('ready')"
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import graphmind; print('alive')"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 500Mi

@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: graphmind-api
+  namespace: graphmind
+  labels:
+    app.kubernetes.io/name: graphmind
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: graphmind
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - graphmind.example.com
+      secretName: graphmind-tls
+  rules:
+    - host: graphmind.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: graphmind-api
+                port:
+                  name: http

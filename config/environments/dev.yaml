@@ -1,0 +1,12 @@
+environment: dev
+llm:
+  primary:
+    provider: ollama
+    model: phi3
+    temperature: 0.1
+rate_limit_rpm: 1000
+api_key: ""
+log_format: console
+debug: true
+agents:
+  eval_threshold: 0.5

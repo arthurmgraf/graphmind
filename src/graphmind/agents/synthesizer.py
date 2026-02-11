@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+import structlog
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -8,7 +8,7 @@ from graphmind.agents.states import AgentState
 from graphmind.llm_router import LLMRouter
 from graphmind.schemas import Citation
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 SYNTHESIZER_SYSTEM = """You are a knowledge synthesis specialist. Given a question and
 retrieved documents, produce a comprehensive, accurate answer.
@@ -46,6 +46,17 @@ async def synthesizer_node(state: AgentState, router: LLMRouter) -> dict:
     response = await router.ainvoke(messages)
     answer = response.content.strip()
 
+    # Extract token usage from LLM response metadata
+    usage: dict = {}
+    meta = getattr(response, "response_metadata", {}) or {}
+    if "token_usage" in meta:
+        usage = meta["token_usage"]
+    elif "usage_metadata" in meta:
+        usage = meta["usage_metadata"]
+    elif "usage" in meta:
+        usage = meta["usage"]
+    provider = meta.get("provider", state.get("provider_used", ""))
+
     citations = [
         Citation(
             document_id=doc.metadata.get("document_id", doc.id),
@@ -58,4 +69,9 @@ async def synthesizer_node(state: AgentState, router: LLMRouter) -> dict:
     ]
 
     logger.info("Synthesized answer with %d citations", len(citations))
-    return {"generation": answer, "citations": citations}
+    return {
+        "generation": answer,
+        "citations": citations,
+        "usage": usage,
+        "provider_used": provider,
+    }

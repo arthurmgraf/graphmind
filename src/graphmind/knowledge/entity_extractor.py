@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+import structlog
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -10,7 +10,7 @@ from graphmind.config import Settings, get_settings
 from graphmind.llm_router import LLMRouter, get_llm_router
 from graphmind.schemas import Entity, EntityType
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 SYSTEM_PROMPT = (
     "You are an expert knowledge-graph entity extractor. "

@@ -1,7 +1,12 @@
+"""Pydantic v2 schemas for the GraphMind platform.
+
+All API request/response models, domain entities, and shared types.
+"""
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
@@ -55,7 +60,7 @@ class DocumentMetadata(BaseModel):
     entity_count: int = 0
     relation_count: int = 0
     content_hash: str = ""
-    ingested_at: datetime = Field(default_factory=datetime.utcnow)
+    ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class RetrievalResult(BaseModel):
@@ -74,10 +79,18 @@ class Citation(BaseModel):
     source: str = ""
 
 
+# ---------------------------------------------------------------------------
+# API request / response models
+# ---------------------------------------------------------------------------
+
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=3, max_length=2000)
     top_k: int = Field(default=10, ge=1, le=100)
     engine: str = "langgraph"
+    session_id: str | None = Field(default=None, description="Session ID for conversation memory")
+    tenant_id: str | None = Field(default=None, description="Tenant ID for multi-tenancy")
+    experiment_id: str | None = Field(default=None, description="Experiment ID for A/B testing")
+    stream: bool = Field(default=False, description="Enable SSE streaming")
 
     @field_validator("engine")
     @classmethod
@@ -95,12 +108,17 @@ class QueryResponse(BaseModel):
     sources_used: int = 0
     latency_ms: float = 0.0
     cost_usd: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    session_id: str | None = None
+    experiment_variant: str | None = None
 
 
 class IngestRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=10 * 1024 * 1024)
     filename: str = Field(..., min_length=1, max_length=512)
     doc_type: str = "markdown"
+    tenant_id: str | None = Field(default=None, description="Tenant ID for multi-tenancy")
 
 
 class IngestResponse(BaseModel):
@@ -108,6 +126,16 @@ class IngestResponse(BaseModel):
     chunks_created: int = 0
     entities_extracted: int = 0
     relations_extracted: int = 0
+    duplicate: bool = False
+    job_id: str | None = None
+
+
+class JobStatus(BaseModel):
+    job_id: str
+    status: str = "pending"  # pending | running | completed | failed
+    result: IngestResponse | None = None
+    error: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class GraphStats(BaseModel):
@@ -121,5 +149,21 @@ class GraphStats(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str = "ok"
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     services: dict[str, str] = Field(default_factory=dict)
+    circuits: dict[str, str] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Error response (matches errors.py envelope)
+# ---------------------------------------------------------------------------
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    request_id: str = ""
+    details: dict | None = None
+
+
+class ErrorEnvelope(BaseModel):
+    error: ErrorDetail

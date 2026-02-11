@@ -70,6 +70,19 @@ class IngestionPipeline:
         text = self._load(content, doc_type, log)
         chunks = self._chunk(text, doc_id, log)
 
+        # Chunk-level near-duplicate detection
+        from graphmind.ingestion.dedup import ChunkDeduplicator
+        deduplicator = ChunkDeduplicator()
+        dedup_result = deduplicator.deduplicate([c.text for c in chunks])
+        if dedup_result.duplicate_indices:
+            dup_set = set(dedup_result.duplicate_indices)
+            chunks = [c for i, c in enumerate(chunks) if i not in dup_set]
+            log.info(
+                "chunks_deduplicated",
+                removed=dedup_result.duplicate_chunks,
+                remaining=len(chunks),
+            )
+
         all_entities: list[Entity] = []
         all_relations: list[Relation] = []
 

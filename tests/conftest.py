@@ -7,6 +7,7 @@ import pytest
 
 os.environ.setdefault("GROQ_API_KEY", "test-key")
 os.environ.setdefault("GEMINI_API_KEY", "test-key")
+os.environ["GRAPHMIND_ENV"] = "test"  # Prevents loading dev/staging/prod profile overlays
 
 
 @pytest.fixture(autouse=True)

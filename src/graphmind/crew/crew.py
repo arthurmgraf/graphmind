@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import logging
+import structlog
 import time
 from typing import Any
 
@@ -22,7 +22,7 @@ from graphmind.crew.tasks import (
 )
 from graphmind.retrieval.hybrid_retriever import HybridRetriever
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class GraphMindCrew:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import structlog
 from typing import Any, Sequence
 
 import httpx
@@ -27,7 +28,7 @@ from graphmind.schemas import (
     QueryResponse,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 server = Server("graphmind")
 

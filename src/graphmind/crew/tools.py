@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
+import structlog
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -10,7 +10,7 @@ from pydantic import Field
 
 from graphmind.config import get_settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class HybridSearchTool(BaseTool):

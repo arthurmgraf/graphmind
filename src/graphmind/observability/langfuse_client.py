@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-import logging
+import structlog
 from contextlib import contextmanager
+from functools import lru_cache
 from typing import Any, Generator
 
 from graphmind.config import get_settings
 
-logger = logging.getLogger(__name__)
-
-_langfuse = None
+logger = structlog.get_logger(__name__)
 
 
-def get_langfuse():
-    global _langfuse
-    if _langfuse is not None:
-        return _langfuse
-
+@lru_cache(maxsize=1)
+def get_langfuse():  # type: ignore[no-untyped-def]
+    """Return a singleton Langfuse client (or *None* if not configured)."""
     settings = get_settings()
     if not settings.langfuse_public_key or not settings.langfuse_secret_key:
         logger.info("Langfuse keys not configured, observability disabled")
@@ -24,13 +21,13 @@ def get_langfuse():
     try:
         from langfuse import Langfuse
 
-        _langfuse = Langfuse(
+        client = Langfuse(
             public_key=settings.langfuse_public_key,
             secret_key=settings.langfuse_secret_key,
             host=settings.langfuse_host,
         )
         logger.info("Langfuse connected to %s", settings.langfuse_host)
-        return _langfuse
+        return client
     except Exception as exc:
         logger.warning("Failed to initialize Langfuse: %s", exc)
         return None

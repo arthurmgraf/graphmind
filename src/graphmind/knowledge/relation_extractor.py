@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+import structlog
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -10,7 +10,7 @@ from graphmind.config import Settings, get_settings
 from graphmind.llm_router import LLMRouter, get_llm_router
 from graphmind.schemas import Entity, Relation
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 VALID_RELATION_TYPES = frozenset(
     {"uses", "depends_on", "extends", "implements", "part_of", "related_to"}

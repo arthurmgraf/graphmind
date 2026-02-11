@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import logging
+import structlog
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from graphmind.agents.states import AgentState
 from graphmind.llm_router import LLMRouter
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 PLANNER_SYSTEM = """You are a query planning specialist. Your job is to decompose complex
 questions into simpler sub-questions that can be answered independently.

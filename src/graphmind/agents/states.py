@@ -19,3 +19,4 @@ class AgentState(TypedDict):
     provider_used: str
     total_tokens: int
     latency_ms: float
+    usage: dict  # Token usage metadata from LLM response

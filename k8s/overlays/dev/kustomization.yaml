@@ -1,0 +1,110 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: graphmind-dev
+
+namePrefix: dev-
+
+resources:
+  - ../../
+
+patches:
+  # API deployment: 1 replica, lower resources
+  - target:
+      kind: Deployment
+      name: graphmind-api
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: graphmind-api
+      spec:
+        replicas: 1
+        template:
+          spec:
+            containers:
+              - name: api
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 256Mi
+                  limits:
+                    cpu: 500m
+                    memory: 512Mi
+
+  # Worker deployment: 1 replica, lower resources
+  - target:
+      kind: Deployment
+      name: graphmind-worker
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: graphmind-worker
+      spec:
+        replicas: 1
+        template:
+          spec:
+            containers:
+              - name: worker
+                resources:
+                  requests:
+                    cpu: 250m
+                    memory: 512Mi
+                  limits:
+                    cpu: "1"
+                    memory: 1Gi
+
+  # HPA: lower min/max for dev
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: graphmind-api
+    patch: |
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: graphmind-api
+      spec:
+        minReplicas: 1
+        maxReplicas: 3
+
+  # ConfigMap: dev-specific values
+  - target:
+      kind: ConfigMap
+      name: graphmind-config
+    patch: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: graphmind-config
+      data:
+        LOG_LEVEL: "DEBUG"
+        ENVIRONMENT: "development"
+        CORS_ORIGINS: "*"
+        UVICORN_WORKERS: "1"
+
+  # Ingress: dev hostname
+  - target:
+      kind: Ingress
+      name: graphmind-api
+    patch: |
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: graphmind-api
+      spec:
+        tls:
+          - hosts:
+              - dev.graphmind.example.com
+            secretName: graphmind-dev-tls
+        rules:
+          - host: dev.graphmind.example.com
+            http:
+              paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: dev-graphmind-api
+                      port:
+                        name: http

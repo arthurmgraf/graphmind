@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import logging
+import structlog
 
 from graphmind.agents.states import AgentState
 from graphmind.retrieval.hybrid_retriever import HybridRetriever
 from graphmind.schemas import RetrievalResult
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def retriever_node(state: AgentState, retriever: HybridRetriever) -> dict:

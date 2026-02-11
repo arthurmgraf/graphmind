@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import logging
+import structlog
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def run_ragas_evaluation(

@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: graphmind-config
+  namespace: graphmind
+  labels:
+    app.kubernetes.io/name: graphmind
+    app.kubernetes.io/part-of: graphmind
+data:
+  # -- Ollama
+  OLLAMA_BASE_URL: "http://ollama.graphmind.svc.cluster.local:11434"
+  OLLAMA_EMBED_MODEL: "nomic-embed-text"
+
+  # -- Qdrant
+  QDRANT_HOST: "qdrant.graphmind.svc.cluster.local"
+  QDRANT_PORT: "6333"
+  QDRANT_COLLECTION: "graphmind"
+
+  # -- Neo4j
+  NEO4J_URI: "bolt://neo4j.graphmind.svc.cluster.local:7687"
+
+  # -- Langfuse
+  LANGFUSE_HOST: "http://langfuse.graphmind.svc.cluster.local:3000"
+
+  # -- Application
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  CORS_ORIGINS: "https://graphmind.example.com"
+  RATE_LIMIT_RPM: "60"
+  UVICORN_HOST: "0.0.0.0"
+  UVICORN_PORT: "8000"
+  UVICORN_WORKERS: "2"
