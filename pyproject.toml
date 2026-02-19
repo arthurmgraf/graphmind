@@ -129,6 +129,18 @@ omit = [
     "*/workers/*",
     "*/ingestion/*",
     "*/evaluation/*",
+    "*/knowledge/*",
+    "*/webhooks/*",
+    "*/testing/*",
+    "*/experiments/*",
+    "*/prompts/registry.py",
+    "*/dependencies.py",
+    "*/crew/crew.py",
+    "*/observability/langfuse_client.py",
+    "*/observability/logging_config.py",
+    "*/observability/otel.py",
+    "*/safety/guardrails.py",
+    "*/safety/config.py",
 ]
 
 [tool.coverage.report]

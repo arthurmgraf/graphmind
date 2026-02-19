@@ -120,8 +120,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
-      - name: Install dependencies
-        run: uv pip install --system -e "." pip-audit
+      - name: Install pip-audit
+        run: uv pip install --system pip-audit
+
+      - name: Generate pinned requirements
+        run: uv pip compile pyproject.toml -o /tmp/requirements.txt
 
       - name: Run pip-audit
-        run: pip-audit --strict --desc on --skip-editable
+        run: pip-audit --strict --desc on -r /tmp/requirements.txt
