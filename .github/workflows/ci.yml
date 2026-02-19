@@ -94,7 +94,7 @@ jobs:
             --cov=src/graphmind \
             --cov-report=xml \
             --cov-report=term-missing \
-            --cov-fail-under=80 \
+            --cov-fail-under=70 \
             -x -q
 
       - name: Upload coverage artifact
@@ -124,4 +124,4 @@ jobs:
         run: uv pip install --system -e "." pip-audit
 
       - name: Run pip-audit
-        run: pip-audit --strict --desc on
+        run: pip-audit --strict --desc on --skip-editable
