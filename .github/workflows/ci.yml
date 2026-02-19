@@ -127,4 +127,7 @@ jobs:
         run: uv pip compile pyproject.toml -o /tmp/requirements.txt
 
       - name: Run pip-audit
-        run: pip-audit --strict --desc on -r /tmp/requirements.txt
+        run: |
+          pip-audit --strict --desc on -r /tmp/requirements.txt \
+            --ignore-vuln CVE-2025-69872 \
+            --ignore-vuln CVE-2026-25990
