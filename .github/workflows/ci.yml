@@ -29,7 +29,7 @@ jobs:
           python-version: ${{ env.PYTHON_DEFAULT }}
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-lint-${{ hashFiles('pyproject.toml') }}
