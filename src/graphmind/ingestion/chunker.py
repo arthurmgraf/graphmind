@@ -87,17 +87,15 @@ class SemanticChunker:
         result: list[str] = [chunks[0]]
         for i in range(1, len(chunks)):
             previous = chunks[i - 1]
-            overlap_text = previous[-self._chunk_overlap:]
+            overlap_text = previous[-self._chunk_overlap :]
             boundary = overlap_text.rfind(" ")
             if boundary > 0:
-                overlap_text = overlap_text[boundary + 1:]
+                overlap_text = overlap_text[boundary + 1 :]
             merged = f"{overlap_text} {chunks[i]}".strip()
             result.append(merged)
         return result
 
-    def _build_document_chunks(
-        self, raw_chunks: list[str], doc_id: str
-    ) -> list[DocumentChunk]:
+    def _build_document_chunks(self, raw_chunks: list[str], doc_id: str) -> list[DocumentChunk]:
         total = len(raw_chunks)
         result: list[DocumentChunk] = []
         char_offset = 0

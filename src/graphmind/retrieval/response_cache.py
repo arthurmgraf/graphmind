@@ -1,4 +1,5 @@
 """LRU response cache for query results with TTL expiration."""
+
 from __future__ import annotations
 
 import hashlib
@@ -63,7 +64,13 @@ class ResponseCache:
         logger.debug("cache_hit", key=key, hits=entry.hits)
         return entry.value
 
-    def put(self, question: str, response: dict, engine: str = "langgraph", top_k: int = 10) -> None:
+    def put(
+        self,
+        question: str,
+        response: dict,
+        engine: str = "langgraph",
+        top_k: int = 10,
+    ) -> None:
         key = self._make_key(question, engine, top_k)
         if key in self._store:
             self._store.move_to_end(key)
@@ -76,7 +83,12 @@ class ResponseCache:
         self._store[key] = CacheEntry(key=key, value=response)
         logger.debug("cache_put", key=key, size=len(self._store))
 
-    def invalidate(self, question: str | None = None, engine: str = "langgraph", top_k: int = 10) -> None:
+    def invalidate(
+        self,
+        question: str | None = None,
+        engine: str = "langgraph",
+        top_k: int = 10,
+    ) -> None:
         if question is None:
             self._store.clear()
             logger.info("cache_cleared")

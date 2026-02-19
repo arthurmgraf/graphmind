@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import sys
 import uuid
 from typing import Any
 
 import structlog
 
 from graphmind.config import get_settings
+from graphmind.ingestion.chunker import SemanticChunker
+from graphmind.ingestion.loaders import DocumentLoader
 from graphmind.schemas import (
     DocumentChunk,
     DocumentMetadata,
@@ -16,9 +17,6 @@ from graphmind.schemas import (
     IngestResponse,
     Relation,
 )
-
-from graphmind.ingestion.chunker import SemanticChunker
-from graphmind.ingestion.loaders import DocumentLoader
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -46,19 +44,13 @@ class IngestionPipeline:
         self._graph_builder = graph_builder
         self._embedder = embedder
         self._vector_retriever = vector_retriever
-        self._semaphore = asyncio.Semaphore(
-            self._settings.ingestion.max_concurrent_chunks
-        )
+        self._semaphore = asyncio.Semaphore(self._settings.ingestion.max_concurrent_chunks)
 
-    async def process(
-        self, content: str, filename: str, doc_type: str
-    ) -> IngestResponse:
+    async def process(self, content: str, filename: str, doc_type: str) -> IngestResponse:
         content_size = len(content.encode("utf-8"))
         max_size = self._settings.ingestion.max_document_size_bytes
         if content_size > max_size:
-            raise ValueError(
-                f"Document exceeds maximum size ({content_size} > {max_size} bytes)"
-            )
+            raise ValueError(f"Document exceeds maximum size ({content_size} > {max_size} bytes)")
 
         doc_hash = _content_hash(content)
         doc_id = str(uuid.uuid4())
@@ -72,6 +64,7 @@ class IngestionPipeline:
 
         # Chunk-level near-duplicate detection
         from graphmind.ingestion.dedup import ChunkDeduplicator
+
         deduplicator = ChunkDeduplicator()
         dedup_result = deduplicator.deduplicate([c.text for c in chunks])
         if dedup_result.duplicate_indices:
@@ -103,7 +96,7 @@ class IngestionPipeline:
                     error=str(result),
                 )
                 continue
-            entities, relations = result
+            entities, relations = result  # type: ignore[misc]
             all_entities.extend(entities)
             all_relations.extend(relations)
             chunks[i].entity_ids = [e.id for e in entities]
@@ -128,9 +121,7 @@ class IngestionPipeline:
             relations_extracted=len(all_relations),
         )
 
-    def _load(
-        self, content: str, doc_type: str, log: structlog.stdlib.BoundLogger
-    ) -> str:
+    def _load(self, content: str, doc_type: str, log: structlog.stdlib.BoundLogger) -> str:
         log.info("loading_document")
         return self._loader.load(content, doc_type)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -67,9 +67,24 @@ def sample_entities():
     from graphmind.schemas import Entity, EntityType
 
     return [
-        Entity(id="ent-1", name="LangGraph", type=EntityType.FRAMEWORK, description="Multi-actor framework"),
-        Entity(id="ent-2", name="Neo4j", type=EntityType.TECHNOLOGY, description="Graph database"),
-        Entity(id="ent-3", name="LangChain", type=EntityType.FRAMEWORK, description="LLM framework"),
+        Entity(
+            id="ent-1",
+            name="LangGraph",
+            type=EntityType.FRAMEWORK,
+            description="Multi-actor framework",
+        ),
+        Entity(
+            id="ent-2",
+            name="Neo4j",
+            type=EntityType.TECHNOLOGY,
+            description="Graph database",
+        ),
+        Entity(
+            id="ent-3",
+            name="LangChain",
+            type=EntityType.FRAMEWORK,
+            description="LLM framework",
+        ),
     ]
 
 
@@ -78,7 +93,13 @@ def sample_relations():
     from graphmind.schemas import Relation
 
     return [
-        Relation(id="rel-1", source_id="ent-1", target_id="ent-3", type="extends", description="LangGraph extends LangChain"),
+        Relation(
+            id="rel-1",
+            source_id="ent-1",
+            target_id="ent-3",
+            type="extends",
+            description="LangGraph extends LangChain",
+        ),
     ]
 
 
@@ -87,7 +108,25 @@ def sample_retrieval_results():
     from graphmind.schemas import RetrievalResult
 
     return [
-        RetrievalResult(id="r1", text="LangGraph doc", score=0.9, source="vector", entity_id="ent-1"),
-        RetrievalResult(id="r2", text="Neo4j doc", score=0.8, source="vector", entity_id="ent-2"),
-        RetrievalResult(id="r3", text="Graph expansion", score=0.7, source="graph", entity_id="ent-1"),
+        RetrievalResult(
+            id="r1",
+            text="LangGraph doc",
+            score=0.9,
+            source="vector",
+            entity_id="ent-1",
+        ),
+        RetrievalResult(
+            id="r2",
+            text="Neo4j doc",
+            score=0.8,
+            source="vector",
+            entity_id="ent-2",
+        ),
+        RetrievalResult(
+            id="r3",
+            text="Graph expansion",
+            score=0.7,
+            source="graph",
+            entity_id="ent-1",
+        ),
     ]

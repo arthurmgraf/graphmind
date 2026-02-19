@@ -40,7 +40,10 @@ def _render_query_page() -> None:
 
         with st.spinner(f"Querying with {engine}..."):
             try:
-                data = _post("/api/v1/query", {"question": question, "top_k": top_k, "engine": engine})
+                data = _post(
+                    "/api/v1/query",
+                    {"question": question, "top_k": top_k, "engine": engine},
+                )
             except Exception as exc:
                 st.error(f"API request failed: {exc}")
                 return
@@ -65,7 +68,10 @@ def _render_query_page() -> None:
 def _render_ingest_page() -> None:
     st.header("Ingest Documents")
 
-    uploaded = st.file_uploader("Upload a file (optional)", type=["md", "pdf", "html", "txt", "py", "ts", "js"])
+    uploaded = st.file_uploader(
+        "Upload a file (optional)",
+        type=["md", "pdf", "html", "txt", "py", "ts", "js"],
+    )
 
     filename = st.text_input("Filename", value=uploaded.name if uploaded else "")
     doc_type = st.selectbox("Document type", ["md", "pdf", "html", "txt", "py", "ts", "js"])

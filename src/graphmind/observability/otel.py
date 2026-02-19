@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import structlog
 from typing import TYPE_CHECKING
 
+import structlog
 from opentelemetry import trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.resources import Resource

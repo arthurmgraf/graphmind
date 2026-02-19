@@ -16,9 +16,9 @@ async def get_rails():
         return _rails
 
     try:
-        import graphmind.safety.config  # noqa: F401 - registers groq provider
-
         from nemoguardrails import LLMRails, RailsConfig
+
+        import graphmind.safety.config  # noqa: F401 - registers groq provider
 
         settings = get_settings()
         config_path = Path(settings.safety.guardrails_path)
@@ -27,7 +27,10 @@ async def get_rails():
         logger.info("NeMo Guardrails initialized from %s", config_path)
         return _rails
     except Exception as exc:
-        logger.warning("Failed to initialize NeMo Guardrails: %s. Running without safety layer.", exc)
+        logger.warning(
+            "Failed to initialize NeMo Guardrails: %s. Running without safety layer.",
+            exc,
+        )
         return None
 
 
@@ -37,9 +40,7 @@ async def check_input(user_message: str) -> tuple[bool, str]:
         return True, user_message
 
     try:
-        response = await rails.generate_async(
-            messages=[{"role": "user", "content": user_message}]
-        )
+        response = await rails.generate_async(messages=[{"role": "user", "content": user_message}])
         bot_message = response.get("content", "")
 
         blocked_phrases = ["cannot comply", "will not process", "I'm designed to answer"]

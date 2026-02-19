@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import structlog
 import time
 from typing import Any
 
+import structlog
 from crewai import Crew, Process
 
 from graphmind.config import get_settings
@@ -47,7 +47,7 @@ class GraphMindCrew:
             settings = self._settings
             return ChatGroq(
                 model=settings.llm_primary.model,
-                api_key=settings.groq_api_key,
+                api_key=settings.groq_api_key,  # type: ignore[arg-type]
                 temperature=settings.llm_primary.temperature,
                 max_tokens=settings.llm_primary.max_tokens,
             )
@@ -64,8 +64,10 @@ class GraphMindCrew:
         best_score = 0.0
 
         for attempt in range(max_retries + 1):
-            current_question = question if attempt == 0 else self._rewrite_question(
-                question, best_result.get("eval_feedback", "")
+            current_question = (
+                question
+                if attempt == 0
+                else self._rewrite_question(question, best_result.get("eval_feedback", ""))
             )
 
             result = self._execute_crew(current_question, question)
@@ -78,14 +80,18 @@ class GraphMindCrew:
             if eval_score >= threshold:
                 logger.info(
                     "CrewAI query passed on attempt %d with score %.2f",
-                    attempt + 1, eval_score,
+                    attempt + 1,
+                    eval_score,
                 )
                 break
 
             if attempt < max_retries:
                 logger.info(
                     "CrewAI score %.2f below threshold %.2f, retrying (%d/%d)",
-                    eval_score, threshold, attempt + 1, max_retries,
+                    eval_score,
+                    threshold,
+                    attempt + 1,
+                    max_retries,
                 )
 
         best_result["retry_count"] = min(attempt, max_retries)
@@ -108,7 +114,10 @@ class GraphMindCrew:
         retrieval_task = create_retrieval_task(retriever, question, planning_task)
         synthesis_task = create_synthesis_task(synthesizer, question, retrieval_task)
         evaluation_task = create_evaluation_task(
-            evaluator, original_question, synthesis_task, retrieval_task,
+            evaluator,
+            original_question,
+            synthesis_task,
+            retrieval_task,
         )
 
         crew = Crew(

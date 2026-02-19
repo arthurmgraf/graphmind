@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from graphmind.ingestion.loaders import DocumentLoader
 from graphmind.ingestion.chunker import SemanticChunker
+from graphmind.ingestion.loaders import DocumentLoader
 
 
 @pytest.mark.integration
@@ -12,7 +12,15 @@ class TestIngestionPipelineIntegration:
         loader = DocumentLoader()
         chunker = SemanticChunker()
 
-        text = loader.load("# LangGraph\n\nLangGraph is a framework for building stateful apps.\n\n## Features\n\nIt supports cyclic graphs and state management.", "md")
+        md_content = (
+            "# LangGraph\n\n"
+            "LangGraph is a framework for building"
+            " stateful apps.\n\n"
+            "## Features\n\n"
+            "It supports cyclic graphs and"
+            " state management."
+        )
+        text = loader.load(md_content, "md")
         assert "LangGraph" in text
 
         chunks = chunker.chunk(text, "test-doc")
@@ -26,7 +34,8 @@ class TestIngestionPipelineIntegration:
 
         paragraphs = []
         for i in range(20):
-            paragraphs.append(f"Section {i}: " + "This is a detailed paragraph with information. " * 10)
+            detail = "This is a detailed paragraph with information. "
+            paragraphs.append(f"Section {i}: " + detail * 10)
         long_text = "\n\n".join(paragraphs)
 
         text = loader.load(long_text, "txt")

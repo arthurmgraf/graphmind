@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import json
 import logging
-import structlog
 from pathlib import Path
+
+import structlog
 
 from graphmind.evaluation.deepeval_suite import evaluate_benchmark, generate_report
 from graphmind.evaluation.eval_models import GroqEvalModel
 
 logger = structlog.get_logger(__name__)
 
-_BENCHMARK_PATH = Path(__file__).resolve().parent.parent.parent.parent / "eval" / "benchmark_dataset.jsonl"
+_BENCHMARK_PATH = (
+    Path(__file__).resolve().parent.parent.parent.parent / "eval" / "benchmark_dataset.jsonl"
+)
 _REPORTS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "eval" / "reports"
 
 

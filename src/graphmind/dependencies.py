@@ -6,11 +6,10 @@ application lifespan and injected via ``Depends()`` into route handlers.
 
 from __future__ import annotations
 
-import structlog
 from dataclasses import dataclass, field
-from typing import Any
 
 import httpx
+import structlog
 from neo4j import AsyncDriver, AsyncGraphDatabase
 from qdrant_client import AsyncQdrantClient
 
@@ -20,8 +19,8 @@ from graphmind.observability.cost_tracker import CostTracker
 from graphmind.observability.metrics import MetricsCollector
 from graphmind.retrieval.embedder import Embedder
 from graphmind.retrieval.graph_retriever import GraphRetriever
-from graphmind.retrieval.vector_retriever import VectorRetriever
 from graphmind.retrieval.hybrid_retriever import HybridRetriever
+from graphmind.retrieval.vector_retriever import VectorRetriever
 
 logger = structlog.get_logger(__name__)
 
@@ -29,6 +28,7 @@ logger = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Resource container — holds all shared, long-lived resources
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Resources:
@@ -78,10 +78,12 @@ class Resources:
 
         # Retrievers
         self.vector_retriever = VectorRetriever(
-            settings=s, client=self.qdrant_client,
+            settings=s,
+            client=self.qdrant_client,
         )
         self.graph_retriever = GraphRetriever(
-            settings=s, driver=self.neo4j_driver,
+            settings=s,
+            driver=self.neo4j_driver,
         )
         self.hybrid_retriever = HybridRetriever(
             vector_retriever=self.vector_retriever,
@@ -97,6 +99,7 @@ class Resources:
         logger.info("Shutting down shared resources")
 
         from graphmind.observability.langfuse_client import flush as langfuse_flush
+
         langfuse_flush()
 
         if self.embedder is not None:
@@ -126,8 +129,7 @@ def set_resources(r: Resources) -> None:
 def get_resources() -> Resources:
     if _resources is None:
         raise RuntimeError(
-            "Resources not initialised. "
-            "Call set_resources() during application startup."
+            "Resources not initialised. Call set_resources() during application startup."
         )
     return _resources
 
@@ -135,6 +137,7 @@ def get_resources() -> Resources:
 # ---------------------------------------------------------------------------
 # FastAPI Depends() helpers
 # ---------------------------------------------------------------------------
+
 
 def get_llm_router_dep() -> LLMRouter:
     return get_resources().llm_router  # type: ignore[return-value]

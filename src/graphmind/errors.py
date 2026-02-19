@@ -6,13 +6,13 @@ exception handler that maps exceptions to HTTP status codes.
 
 from __future__ import annotations
 
-import structlog
 import traceback
 from typing import Any
 
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = structlog.get_logger(__name__)
 
@@ -20,6 +20,7 @@ logger = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Error envelope schema
 # ---------------------------------------------------------------------------
+
 
 class ErrorDetail(BaseModel):
     code: str
@@ -35,6 +36,7 @@ class ErrorResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Custom exceptions
 # ---------------------------------------------------------------------------
+
 
 class GraphMindError(Exception):
     """Base exception for all GraphMind errors."""
@@ -97,6 +99,7 @@ class InjectionDetectedError(GraphMindError):
 # Exception handler registration
 # ---------------------------------------------------------------------------
 
+
 def _build_error_response(
     request: Request,
     status_code: int,
@@ -133,7 +136,9 @@ def register_exception_handlers(app: FastAPI, *, debug: bool = False) -> None:
     @app.exception_handler(GraphMindError)
     async def _graphmind_error(request: Request, exc: GraphMindError) -> JSONResponse:
         logger.warning(
-            "GraphMindError %s: %s", exc.error_code, exc.message,
+            "GraphMindError %s: %s",
+            exc.error_code,
+            exc.message,
         )
         return _build_error_response(
             request,

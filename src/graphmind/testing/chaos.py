@@ -1,12 +1,16 @@
 """Chaos engineering fault injection for staging environments."""
+
 from __future__ import annotations
+
 import asyncio
 import logging
 import random
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
+
 
 class ChaosMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, error_rate: float = 0.0, latency_ms: int = 0, enabled: bool = False):
@@ -25,7 +29,10 @@ class ChaosMiddleware(BaseHTTPMiddleware):
         if self._error_rate > 0 and random.random() < self._error_rate:
             logger.warning("Chaos: injecting 500 error")
             return Response(
-                content='{"error":{"code":"CHAOS_FAULT","message":"Injected failure for chaos testing"}}',
+                content=(
+                    '{"error":{"code":"CHAOS_FAULT",'
+                    '"message":"Injected failure for chaos testing"}}'
+                ),
                 status_code=500,
                 media_type="application/json",
             )

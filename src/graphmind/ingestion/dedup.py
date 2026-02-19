@@ -1,8 +1,8 @@
 """Chunk-level near-duplicate detection using MinHash (Jaccard similarity)."""
+
 from __future__ import annotations
 
 import hashlib
-import struct
 from dataclasses import dataclass
 
 import structlog
@@ -59,7 +59,7 @@ class MinHashSignature:
         """Estimate Jaccard similarity between two signatures."""
         if len(self._signature) != len(other._signature):
             return 0.0
-        matches = sum(1 for a, b in zip(self._signature, other._signature) if a == b)
+        matches = sum(1 for a, b in zip(self._signature, other._signature, strict=False) if a == b)
         return matches / len(self._signature)
 
 

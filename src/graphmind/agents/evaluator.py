@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import structlog
 
+import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from graphmind.agents.states import AgentState
@@ -36,15 +36,13 @@ async def evaluator_node(state: AgentState, router: LLMRouter) -> dict:
         SystemMessage(content=EVALUATOR_SYSTEM),
         HumanMessage(
             content=(
-                f"Question: {question}\n\n"
-                f"Answer: {generation}\n\n"
-                f"Source Documents:\n{doc_snippets}"
+                f"Question: {question}\n\nAnswer: {generation}\n\nSource Documents:\n{doc_snippets}"
             )
         ),
     ]
 
     response = await router.ainvoke(messages)
-    raw = response.content.strip()
+    raw = response.content.strip()  # type: ignore[union-attr]
 
     try:
         cleaned = raw.strip("`").removeprefix("json").strip()

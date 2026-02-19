@@ -1,4 +1,5 @@
 """Paginated document and job listing endpoints."""
+
 from __future__ import annotations
 
 from typing import Any

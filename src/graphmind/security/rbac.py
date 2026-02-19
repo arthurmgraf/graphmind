@@ -1,21 +1,22 @@
 """Role-Based Access Control (RBAC) for GraphMind API."""
+
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import structlog
 
 logger = structlog.get_logger(__name__)
 
 
-class Role(str, enum.Enum):
+class Role(enum.StrEnum):
     ADMIN = "admin"
     EDITOR = "editor"
     VIEWER = "viewer"
 
 
-class Permission(str, enum.Enum):
+class Permission(enum.StrEnum):
     QUERY = "query"
     QUERY_STREAM = "query:stream"
     INGEST = "ingest"

@@ -59,7 +59,7 @@ class Embedder:
                 return response.json()
             except (httpx.HTTPStatusError, httpx.ConnectError, httpx.ReadTimeout) as exc:
                 last_error = exc
-                wait = _BACKOFF_BASE * (2 ** attempt)
+                wait = _BACKOFF_BASE * (2**attempt)
                 logger.warning(
                     "Embedding request failed (attempt %d/%d): %s — retrying in %.1fs",
                     attempt + 1,
@@ -69,9 +69,7 @@ class Embedder:
                 )
                 await asyncio.sleep(wait)
 
-        raise RuntimeError(
-            f"Embedding request failed after {_MAX_RETRIES} attempts: {last_error}"
-        )
+        raise RuntimeError(f"Embedding request failed after {_MAX_RETRIES} attempts: {last_error}")
 
     async def embed(self, text: str) -> list[float]:
         key = self._cache_key(text)
@@ -79,15 +77,11 @@ class Embedder:
             self._cache.move_to_end(key)
             return self._cache[key]
 
-        data = await self._post_with_retry(
-            {"model": self._model, "input": text}
-        )
+        data = await self._post_with_retry({"model": self._model, "input": text})
         vector = data["embeddings"][0]
 
         if len(vector) != self._dimensions:
-            raise ValueError(
-                f"Dimension mismatch: expected {self._dimensions}, got {len(vector)}"
-            )
+            raise ValueError(f"Dimension mismatch: expected {self._dimensions}, got {len(vector)}")
 
         self._cache[key] = vector
         if len(self._cache) > _CACHE_MAX_SIZE:
@@ -127,9 +121,7 @@ class Embedder:
                     len(uncached_texts),
                 )
 
-                data = await self._post_with_retry(
-                    {"model": self._model, "input": batch_texts}
-                )
+                data = await self._post_with_retry({"model": self._model, "input": batch_texts})
                 embeddings = data["embeddings"]
 
                 for j, idx in enumerate(batch_indices):

@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections import defaultdict
 
 from graphmind.config import Settings, get_settings
-from graphmind.schemas import RetrievalResult
 from graphmind.retrieval.embedder import Embedder
 from graphmind.retrieval.graph_retriever import GraphRetriever
 from graphmind.retrieval.vector_retriever import VectorRetriever
+from graphmind.schemas import RetrievalResult
 
 
 class HybridRetriever:
@@ -22,9 +22,7 @@ class HybridRetriever:
         self._embedder = embedder
         self._settings = settings or get_settings()
 
-    async def retrieve(
-        self, query: str, top_n: int = 10
-    ) -> list[RetrievalResult]:
+    async def retrieve(self, query: str, top_n: int = 10) -> list[RetrievalResult]:
         query_vector = await self._embedder.embed(query)
 
         vector_top_k = self._settings.retrieval.vector_top_k
@@ -32,9 +30,7 @@ class HybridRetriever:
             query_vector=query_vector, limit=vector_top_k
         )
 
-        entity_ids = [
-            r.entity_id for r in vector_results if r.entity_id is not None
-        ]
+        entity_ids = [r.entity_id for r in vector_results if r.entity_id is not None]
 
         graph_hops = self._settings.retrieval.graph_hops
         graph_results: list[RetrievalResult] = []
@@ -51,9 +47,7 @@ class HybridRetriever:
         return fused[:top_n]
 
     @staticmethod
-    def _rrf_fusion(
-        ranked_lists: list[list[RetrievalResult]], k: int
-    ) -> list[RetrievalResult]:
+    def _rrf_fusion(ranked_lists: list[list[RetrievalResult]], k: int) -> list[RetrievalResult]:
         scores: defaultdict[str, float] = defaultdict(float)
         result_map: dict[str, RetrievalResult] = {}
 

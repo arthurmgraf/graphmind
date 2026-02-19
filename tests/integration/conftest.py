@@ -3,6 +3,7 @@
 These tests require Docker services running:
     make infra
 """
+
 from __future__ import annotations
 
 import os
@@ -16,6 +17,7 @@ os.environ["GRAPHMIND_ENV"] = "test"
 
 def _service_available(host: str, port: int) -> bool:
     import socket
+
     try:
         with socket.create_connection((host, port), timeout=2):
             return True

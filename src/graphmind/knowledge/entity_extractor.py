@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import structlog
 from typing import Any
 
+import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
@@ -26,10 +26,10 @@ SYSTEM_PROMPT = (
 USER_TEMPLATE = (
     "Extract all entities from the following text.\n\n"
     "---\n{text}\n---\n\n"
-    "Respond with a JSON object containing a single key \"entities\" "
+    'Respond with a JSON object containing a single key "entities" '
     "whose value is an array of objects, each with keys: "
-    "\"name\" (string), \"type\" (one of: concept, technology, person, "
-    "organization, framework, pattern, other), and \"description\" (string)."
+    '"name" (string), "type" (one of: concept, technology, person, '
+    'organization, framework, pattern, other), and "description" (string).'
 )
 
 
@@ -70,7 +70,7 @@ class EntityExtractor:
         structured_llm = llm.with_structured_output(ExtractionResult)
 
         try:
-            result: ExtractionResult = await structured_llm.ainvoke(messages)
+            result: ExtractionResult = await structured_llm.ainvoke(messages)  # type: ignore[assignment]
         except Exception:
             logger.exception("Structured extraction failed, attempting fallback parse")
             response = await self._router.ainvoke(messages)

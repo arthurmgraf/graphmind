@@ -7,12 +7,13 @@ independent circuit breaker with CLOSED → OPEN → HALF_OPEN state machine.
 from __future__ import annotations
 
 import enum
-import structlog
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, AsyncIterator
+from typing import Any
 
+import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 
@@ -24,6 +25,7 @@ logger = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Circuit breaker with half-open state
 # ---------------------------------------------------------------------------
+
 
 class CircuitPhase(enum.Enum):
     CLOSED = "closed"
@@ -54,9 +56,8 @@ class CircuitState:
 
     @property
     def phase(self) -> CircuitPhase:
-        if self._phase == CircuitPhase.OPEN:
-            if time.monotonic() >= self.open_until:
-                self._phase = CircuitPhase.HALF_OPEN
+        if self._phase == CircuitPhase.OPEN and time.monotonic() >= self.open_until:
+            self._phase = CircuitPhase.HALF_OPEN
         return self._phase
 
     @property
@@ -68,6 +69,7 @@ class CircuitState:
 # ---------------------------------------------------------------------------
 # Provider metrics
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ProviderMetrics:
@@ -117,12 +119,13 @@ class RouterMetrics:
 # Provider builders
 # ---------------------------------------------------------------------------
 
+
 def _build_groq(settings: Settings) -> BaseChatModel:
     from langchain_groq import ChatGroq
 
     return ChatGroq(
         model=settings.llm_primary.model,
-        api_key=settings.groq_api_key,
+        api_key=settings.groq_api_key,  # type: ignore[arg-type]
         temperature=settings.llm_primary.temperature,
         max_tokens=settings.llm_primary.max_tokens,
     )
@@ -160,9 +163,7 @@ class LLMRouter:
     def __init__(self, settings: Settings | None = None) -> None:
         self._settings = settings or get_settings()
         self._cache: dict[str, BaseChatModel] = {}
-        self._circuits: dict[str, CircuitState] = {
-            name: CircuitState() for name, _ in _PROVIDERS
-        }
+        self._circuits: dict[str, CircuitState] = {name: CircuitState() for name, _ in _PROVIDERS}
         self.metrics = RouterMetrics()
 
     def _get_llm(self, name: str, builder: Any) -> BaseChatModel:
@@ -174,9 +175,7 @@ class LLMRouter:
     def circuit_states(self) -> dict[str, str]:
         return {name: cs.phase.value for name, cs in self._circuits.items()}
 
-    async def ainvoke(
-        self, messages: list[BaseMessage], **kwargs: Any
-    ) -> BaseMessage:
+    async def ainvoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage:
         last_error: Exception | None = None
         provider_used: str = ""
 
@@ -210,18 +209,17 @@ class LLMRouter:
                 if is_probe:
                     logger.warning("Half-open probe failed for %s, circuit re-opened", name)
                 logger.warning(
-                    "Provider %s failed after %.0f ms: %s", name, elapsed, exc,
+                    "Provider %s failed after %.0f ms: %s",
+                    name,
+                    elapsed,
+                    exc,
                 )
                 last_error = exc
                 continue
 
-        raise RuntimeError(
-            f"All LLM providers exhausted. Last error: {last_error}"
-        )
+        raise RuntimeError(f"All LLM providers exhausted. Last error: {last_error}")
 
-    async def astream(
-        self, messages: list[BaseMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def astream(self, messages: list[BaseMessage], **kwargs: Any) -> AsyncIterator[str]:
         """Stream tokens from the first available provider."""
         last_error: Exception | None = None
 
@@ -235,7 +233,7 @@ class LLMRouter:
                 llm = self._get_llm(name, builder)
                 async for chunk in llm.astream(messages, **kwargs):
                     if hasattr(chunk, "content"):
-                        yield chunk.content
+                        yield chunk.content  # type: ignore[misc]
                 elapsed = (time.perf_counter() - t0) * 1000
                 circuit.record_success()
                 self.metrics.record(name, elapsed, success=True)
@@ -247,9 +245,7 @@ class LLMRouter:
                 last_error = exc
                 continue
 
-        raise RuntimeError(
-            f"All LLM providers exhausted (streaming). Last error: {last_error}"
-        )
+        raise RuntimeError(f"All LLM providers exhausted (streaming). Last error: {last_error}")
 
     def invoke(self, messages: list[BaseMessage], **kwargs: Any) -> BaseMessage:
         last_error: Exception | None = None
@@ -276,14 +272,15 @@ class LLMRouter:
                 circuit.record_failure()
                 self.metrics.record(name, elapsed, success=False)
                 logger.warning(
-                    "Provider %s failed after %.0f ms: %s", name, elapsed, exc,
+                    "Provider %s failed after %.0f ms: %s",
+                    name,
+                    elapsed,
+                    exc,
                 )
                 last_error = exc
                 continue
 
-        raise RuntimeError(
-            f"All LLM providers exhausted. Last error: {last_error}"
-        )
+        raise RuntimeError(f"All LLM providers exhausted. Last error: {last_error}")
 
     def get_primary(self) -> BaseChatModel:
         return self._get_llm("groq", _build_groq)

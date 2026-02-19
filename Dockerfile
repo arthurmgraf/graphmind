@@ -1,9 +1,14 @@
 # ============================================================================
-# GraphMind API — Multi-stage Docker build
+# GraphMind API ï¿½ Multi-stage Docker build
 # ============================================================================
 FROM python:3.11-slim AS builder
 
 WORKDIR /build
+
+# Install C/C++ toolchain required by native extensions (annoy, grpcio, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install build-only dependencies
 RUN pip install --no-cache-dir hatchling

@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import json
-import structlog
 from typing import Any
 
+import structlog
 from crewai.tools import BaseTool
-from pydantic import Field
 
 from graphmind.config import get_settings
 
@@ -34,6 +33,7 @@ class HybridSearchTool(BaseTool):
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     results = pool.submit(
                         asyncio.run, self._retriever.retrieve(query, top_n=10)
@@ -83,10 +83,14 @@ class GraphExpansionTool(BaseTool):
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     results = pool.submit(
                         asyncio.run,
-                        self._graph_retriever.expand(entity_ids, hops=settings.retrieval.graph_hops),
+                        self._graph_retriever.expand(
+                            entity_ids,
+                            hops=settings.retrieval.graph_hops,
+                        ),
                     ).result()
             else:
                 results = asyncio.run(
@@ -126,15 +130,9 @@ class EvaluateAnswerTool(BaseTool):
 
         has_citations = "[Source:" in answer or "[Document" in answer
         addresses_question = any(
-            word.lower() in answer.lower()
-            for word in question.split()
-            if len(word) > 3
+            word.lower() in answer.lower() for word in question.split() if len(word) > 3
         )
-        uses_context = any(
-            doc_text[:50].lower() in answer.lower()
-            for doc_text in documents[:5]
-            if doc_text
-        )
+        any(doc_text[:50].lower() in answer.lower() for doc_text in documents[:5] if doc_text)
 
         relevancy = 0.8 if addresses_question else 0.4
         groundedness = 0.9 if has_citations else 0.5
@@ -142,10 +140,12 @@ class EvaluateAnswerTool(BaseTool):
 
         combined = (relevancy * 0.4) + (groundedness * 0.4) + (completeness * 0.2)
 
-        return json.dumps({
-            "relevancy": relevancy,
-            "groundedness": groundedness,
-            "completeness": completeness,
-            "combined": round(combined, 3),
-            "feedback": "Answer evaluated successfully",
-        })
+        return json.dumps(
+            {
+                "relevancy": relevancy,
+                "groundedness": groundedness,
+                "completeness": completeness,
+                "combined": round(combined, 3),
+                "feedback": "Answer evaluated successfully",
+            }
+        )

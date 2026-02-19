@@ -19,7 +19,7 @@ if _need_fastapi_stub:
     sys.modules["fastapi"] = _fastapi_mod
     sys.modules["fastapi.responses"] = _fastapi_responses
 
-from graphmind.errors import (
+from graphmind.errors import (  # noqa: E402
     AuthenticationError,
     ForbiddenError,
     GraphMindError,

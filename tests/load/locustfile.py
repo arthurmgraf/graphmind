@@ -1,5 +1,7 @@
 """Load testing scenarios for GraphMind API."""
-from locust import HttpUser, task, between
+
+from locust import HttpUser, between, task
+
 
 class GraphMindUser(HttpUser):
     wait_time = between(1, 3)
@@ -11,15 +13,21 @@ class GraphMindUser(HttpUser):
 
     @task(80)
     def query_simple(self):
-        self.client.post("/api/v1/query", json={
-            "question": "What is machine learning?",
-            "engine": "langgraph",
-        })
+        self.client.post(
+            "/api/v1/query",
+            json={
+                "question": "What is machine learning?",
+                "engine": "langgraph",
+            },
+        )
 
     @task(5)
     def ingest_document(self):
-        self.client.post("/api/v1/ingest", json={
-            "content": "Machine learning is a subset of artificial intelligence.",
-            "filename": "test_doc.md",
-            "doc_type": "markdown",
-        })
+        self.client.post(
+            "/api/v1/ingest",
+            json={
+                "content": "Machine learning is a subset of artificial intelligence.",
+                "filename": "test_doc.md",
+                "doc_type": "markdown",
+            },
+        )

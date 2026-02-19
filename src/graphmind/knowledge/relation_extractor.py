@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import structlog
 from typing import Any
 
+import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
@@ -32,11 +32,11 @@ USER_TEMPLATE = (
     "Entities:\n{entity_list}\n\n"
     "Identify all directed relationships between the entities above "
     "that are supported by the text. "
-    "Respond with a JSON object containing a single key \"relations\" "
+    'Respond with a JSON object containing a single key "relations" '
     "whose value is an array of objects, each with keys: "
-    "\"source\" (entity name), \"target\" (entity name), "
-    "\"type\" (one of: uses, depends_on, extends, implements, part_of, related_to), "
-    "and \"description\" (brief explanation)."
+    '"source" (entity name), "target" (entity name), '
+    '"type" (one of: uses, depends_on, extends, implements, part_of, related_to), '
+    'and "description" (brief explanation).'
 )
 
 
@@ -78,24 +78,20 @@ class RelationExtractor:
         if len(entities) < 2:
             return []
 
-        entity_name_to_id: dict[str, str] = {
-            entity.name.lower(): entity.id for entity in entities
-        }
+        entity_name_to_id: dict[str, str] = {entity.name.lower(): entity.id for entity in entities}
 
         entity_list_str = _format_entity_list(entities)
 
         messages = [
             SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(
-                content=USER_TEMPLATE.format(text=text, entity_list=entity_list_str)
-            ),
+            HumanMessage(content=USER_TEMPLATE.format(text=text, entity_list=entity_list_str)),
         ]
 
         llm = self._router.get_primary()
         structured_llm = llm.with_structured_output(ExtractionResult)
 
         try:
-            result: ExtractionResult = await structured_llm.ainvoke(messages)
+            result: ExtractionResult = await structured_llm.ainvoke(messages)  # type: ignore[assignment]
         except Exception:
             logger.exception("Structured relation extraction failed, attempting fallback")
             response = await self._router.ainvoke(messages)

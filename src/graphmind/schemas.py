@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -16,7 +16,7 @@ def _uuid() -> str:
     return str(uuid.uuid4())
 
 
-class EntityType(str, Enum):
+class EntityType(StrEnum):
     CONCEPT = "concept"
     TECHNOLOGY = "technology"
     PERSON = "person"
@@ -82,6 +82,7 @@ class Citation(BaseModel):
 # ---------------------------------------------------------------------------
 # API request / response models
 # ---------------------------------------------------------------------------
+
 
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=3, max_length=2000)
@@ -157,6 +158,7 @@ class HealthResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Error response (matches errors.py envelope)
 # ---------------------------------------------------------------------------
+
 
 class ErrorDetail(BaseModel):
     code: str

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-import structlog
 from dataclasses import dataclass, field
+
+import structlog
 
 logger = structlog.get_logger(__name__)
 
 # Pricing per 1 M tokens (USD) — updated 2025-01
 PRICING_PER_1M_TOKENS: dict[str, dict[str, float]] = {
-    "groq": {"input": 0.59, "output": 0.79},       # Llama 3.3 70B
-    "gemini": {"input": 0.075, "output": 0.30},     # Gemini 2.0 Flash
-    "ollama": {"input": 0.0, "output": 0.0},        # local — zero cost
+    "groq": {"input": 0.59, "output": 0.79},  # Llama 3.3 70B
+    "gemini": {"input": 0.075, "output": 0.30},  # Gemini 2.0 Flash
+    "ollama": {"input": 0.0, "output": 0.0},  # local — zero cost
 }
 
 
@@ -27,6 +28,7 @@ class QueryCost:
 @dataclass
 class BudgetAlert:
     """Fired when cost exceeds a threshold."""
+
     threshold_usd: float
     current_usd: float
     tenant_id: str = ""
@@ -79,14 +81,16 @@ class CostTracker:
             threshold = self.budget_limit_usd * threshold_pct
             if total >= threshold:
                 already_alerted = any(
-                    a.threshold_usd == threshold and a.tenant_id == ""
-                    for a in self._alerts
+                    a.threshold_usd == threshold and a.tenant_id == "" for a in self._alerts
                 )
                 if not already_alerted:
                     alert = BudgetAlert(
                         threshold_usd=threshold,
                         current_usd=total,
-                        message=f"Global budget {threshold_pct:.0%} reached: ${total:.4f} / ${self.budget_limit_usd:.2f}",
+                        message=(
+                            f"Global budget {threshold_pct:.0%} reached:"
+                            f" ${total:.4f} / ${self.budget_limit_usd:.2f}"
+                        ),
                     )
                     self._alerts.append(alert)
                     logger.warning(
@@ -101,9 +105,7 @@ class CostTracker:
             tenant_cost = self._by_tenant[tenant_id]
             tenant_limit = self.budget_limit_usd / 10  # each tenant gets 10% of budget
             if tenant_cost >= tenant_limit:
-                already_alerted = any(
-                    a.tenant_id == tenant_id for a in self._alerts
-                )
+                already_alerted = any(a.tenant_id == tenant_id for a in self._alerts)
                 if not already_alerted:
                     alert = BudgetAlert(
                         threshold_usd=tenant_limit,
@@ -139,10 +141,7 @@ class CostTracker:
         return self._by_tenant.get(tenant_id, 0.0)
 
     def tenant_summary(self) -> dict[str, dict]:
-        return {
-            tid: {"cost_usd": round(cost, 6)}
-            for tid, cost in self._by_tenant.items()
-        }
+        return {tid: {"cost_usd": round(cost, 6)} for tid, cost in self._by_tenant.items()}
 
     def summary(self) -> dict:
         return {
@@ -152,7 +151,8 @@ class CostTracker:
             "budget_limit_usd": self.budget_limit_usd,
             "budget_used_pct": round(
                 (self.total_cost / self.budget_limit_usd * 100)
-                if self.budget_limit_usd > 0 else 0.0,
+                if self.budget_limit_usd > 0
+                else 0.0,
                 1,
             ),
             "alerts_fired": len(self._alerts),

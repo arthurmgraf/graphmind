@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import structlog
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import httpx
+import structlog
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
@@ -47,7 +48,9 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "Natural language question that may require multi-hop reasoning",
+                        "description": (
+                            "Natural language question that may require multi-hop reasoning"
+                        ),
                     },
                     "top_k": {
                         "type": "integer",
@@ -140,14 +143,16 @@ async def _handle_query(arguments: dict[str, Any]) -> list[TextContent]:
     top_k: int = arguments.get("top_k", 10)
     engine: str = arguments.get("engine", "langgraph")
 
-    logger.info("MCP query tool invoked with question: %s (top_k=%d, engine=%s)", question, top_k, engine)
+    logger.info(
+        "MCP query tool invoked with question: %s (top_k=%d, engine=%s)",
+        question,
+        top_k,
+        engine,
+    )
 
     result = await run_query(question=question, engine=engine)
 
-    citations = [
-        Citation(**c) if isinstance(c, dict) else c
-        for c in result.get("citations", [])
-    ]
+    citations = [Citation(**c) if isinstance(c, dict) else c for c in result.get("citations", [])]
 
     response = QueryResponse(
         answer=result.get("generation", ""),

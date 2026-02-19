@@ -1,18 +1,23 @@
 """A/B testing experiment registry for prompt and model variants."""
+
 from __future__ import annotations
-import structlog
+
 import random
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
+import structlog
+
 logger = structlog.get_logger(__name__)
+
 
 @dataclass
 class ExperimentVariant:
     name: str
     traffic_percentage: float
     config: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class ExperimentResult:
@@ -21,6 +26,7 @@ class ExperimentResult:
     latency_ms: float = 0.0
     cost_usd: float = 0.0
     timestamp: float = field(default_factory=time.time)
+
 
 @dataclass
 class Experiment:
@@ -35,10 +41,7 @@ class Experiment:
     def assign_variant(self, tenant_id: str | None = None) -> ExperimentVariant | None:
         if not self.active or not self.variants:
             return None
-        if tenant_id:
-            seed = hash(f"{self.id}:{tenant_id}") % 100
-        else:
-            seed = random.randint(0, 99)
+        seed = hash(f"{self.id}:{tenant_id}") % 100 if tenant_id else random.randint(0, 99)
         cumulative = 0.0
         for variant in self.variants:
             cumulative += variant.traffic_percentage
@@ -64,6 +67,7 @@ class Experiment:
                 variant_stats[variant.name] = {"count": 0}
         return {"id": self.id, "name": self.name, "active": self.active, "variants": variant_stats}
 
+
 class ExperimentRegistry:
     def __init__(self) -> None:
         self._experiments: dict[str, Experiment] = {}
@@ -84,7 +88,9 @@ class ExperimentRegistry:
             return True
         return False
 
+
 _registry: ExperimentRegistry | None = None
+
 
 def get_experiment_registry() -> ExperimentRegistry:
     global _registry

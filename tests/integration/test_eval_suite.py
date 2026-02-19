@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -32,7 +31,9 @@ class TestEvalBenchmarkIntegration:
                 f.write(json.dumps(entry) + "\n")
 
         eval_model = MagicMock()
-        eval_model.generate.return_value = '{"relevancy": 0.85, "groundedness": 0.9, "completeness": 0.8}'
+        eval_model.generate.return_value = (
+            '{"relevancy": 0.85, "groundedness": 0.9, "completeness": 0.8}'
+        )
 
         results = evaluate_benchmark(dataset, eval_model=eval_model, threshold=0.7)
         assert len(results) == 2

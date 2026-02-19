@@ -1,8 +1,10 @@
 """Prompt versioning registry with YAML-based configuration."""
+
 from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Any
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -10,11 +12,13 @@ logger = logging.getLogger(__name__)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 _PROMPTS_DIR = _PROJECT_ROOT / "config" / "prompts"
 
+
 class PromptVersion:
     def __init__(self, version: str, system: str, active: bool = False) -> None:
         self.version = version
         self.system = system
         self.active = active
+
 
 class PromptRegistry:
     def __init__(self, prompts_dir: Path | None = None) -> None:
@@ -81,7 +85,9 @@ class PromptRegistry:
         self._prompts[name][version].active = True
         return True
 
+
 _registry: PromptRegistry | None = None
+
 
 def get_prompt_registry() -> PromptRegistry:
     global _registry

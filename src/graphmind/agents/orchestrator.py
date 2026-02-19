@@ -6,10 +6,10 @@ No module-level global state — the graph is built per-request or injected via 
 
 from __future__ import annotations
 
-import structlog
 import time
-from functools import lru_cache, partial
+from functools import partial
 
+import structlog
 from langgraph.graph import END, StateGraph
 
 from graphmind.agents.evaluator import evaluator_node
@@ -55,7 +55,7 @@ async def _rewrite_node(state: AgentState, router: LLMRouter) -> dict:
         HumanMessage(content=f"Original: {question}\nFeedback: {feedback}"),
     ]
     response = await router.ainvoke(messages)
-    new_question = response.content.strip()
+    new_question = response.content.strip()  # type: ignore[union-attr]
 
     return {
         "question": new_question,
@@ -92,7 +92,7 @@ def build_graph(
     )
     workflow.add_edge("rewrite", "plan")
 
-    return workflow.compile()
+    return workflow.compile()  # type: ignore[return-value]
 
 
 def get_orchestrator(

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import neo4j
 from neo4j import AsyncDriver, AsyncGraphDatabase
 
 from graphmind.config import Settings, get_settings
@@ -27,9 +26,7 @@ class GraphRetriever:
             self._owns_driver = True
         self._database = self._settings.graph_db.database
 
-    async def expand(
-        self, entity_ids: list[str], hops: int = 2
-    ) -> list[RetrievalResult]:
+    async def expand(self, entity_ids: list[str], hops: int = 2) -> list[RetrievalResult]:
         query = (
             "MATCH path = (e:Entity)-[*1..$hops]-(related) "
             "WHERE e.id IN $ids "
@@ -78,9 +75,7 @@ class GraphRetriever:
                 )
         return results
 
-    async def search_by_name(
-        self, query: str, limit: int = 10
-    ) -> list[RetrievalResult]:
+    async def search_by_name(self, query: str, limit: int = 10) -> list[RetrievalResult]:
         cypher = (
             "MATCH (e:Entity) "
             "WHERE e.name CONTAINS $query "
@@ -89,7 +84,7 @@ class GraphRetriever:
         )
         results: list[RetrievalResult] = []
         async with self._driver.session(database=self._database) as session:
-            records = await session.run(cypher, query=query, limit=limit)
+            records = await session.run(cypher, query=query, limit=limit)  # type: ignore[misc]
             async for record in records:
                 node_id = record["node_id"]
                 name = record["name"] or ""

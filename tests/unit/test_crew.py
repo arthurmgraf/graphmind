@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
 
 from graphmind.crew.tools import EvaluateAnswerTool, HybridSearchTool
 
@@ -22,11 +21,17 @@ class TestHybridSearchTool:
 class TestEvaluateAnswerTool:
     def test_evaluates_good_answer(self):
         tool = EvaluateAnswerTool()
-        input_data = json.dumps({
-            "question": "What is LangGraph?",
-            "answer": "LangGraph is a framework for building stateful applications. [Source: doc1] It supports cyclic graphs.",
-            "documents": ["LangGraph is a framework for building stateful applications."],
-        })
+        input_data = json.dumps(
+            {
+                "question": "What is LangGraph?",
+                "answer": (
+                    "LangGraph is a framework for building"
+                    " stateful applications. [Source: doc1]"
+                    " It supports cyclic graphs."
+                ),
+                "documents": ["LangGraph is a framework for building stateful applications."],
+            }
+        )
         result = json.loads(tool._run(input_data))
         assert "relevancy" in result
         assert "groundedness" in result
@@ -36,21 +41,25 @@ class TestEvaluateAnswerTool:
 
     def test_evaluates_poor_answer(self):
         tool = EvaluateAnswerTool()
-        input_data = json.dumps({
-            "question": "What is LangGraph?",
-            "answer": "Short",
-            "documents": ["LangGraph is a framework."],
-        })
+        input_data = json.dumps(
+            {
+                "question": "What is LangGraph?",
+                "answer": "Short",
+                "documents": ["LangGraph is a framework."],
+            }
+        )
         result = json.loads(tool._run(input_data))
         assert result["completeness"] == 0.4
 
     def test_handles_empty_answer(self):
         tool = EvaluateAnswerTool()
-        input_data = json.dumps({
-            "question": "What is LangGraph?",
-            "answer": "",
-            "documents": [],
-        })
+        input_data = json.dumps(
+            {
+                "question": "What is LangGraph?",
+                "answer": "",
+                "documents": [],
+            }
+        )
         result = json.loads(tool._run(input_data))
         assert result["score"] == 0.0
 

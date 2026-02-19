@@ -15,14 +15,16 @@ class TestMetricsCollector:
 
     def test_record_metric(self):
         mc = MetricsCollector()
-        mc.record(QueryMetric(
-            question="What is LangGraph?",
-            latency_ms=150.0,
-            eval_score=0.85,
-            retry_count=0,
-            sources_used=5,
-            provider="groq",
-        ))
+        mc.record(
+            QueryMetric(
+                question="What is LangGraph?",
+                latency_ms=150.0,
+                eval_score=0.85,
+                retry_count=0,
+                sources_used=5,
+                provider="groq",
+            )
+        )
         assert mc.total_queries == 1
         assert mc.avg_latency_ms == 150.0
         assert mc.avg_eval_score == 0.85

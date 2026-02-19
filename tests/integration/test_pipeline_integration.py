@@ -2,10 +2,12 @@
 
 Tests the pipeline with mocked external services.
 """
+
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 pytestmark = pytest.mark.integration
 
@@ -28,8 +30,11 @@ class TestIngestionPipeline:
             vector_retriever=mock_vector,
         )
 
+        content = (
+            "# Test Document\n\nThis is a test paragraph with enough content to be meaningful."
+        )
         response = await pipeline.process(
-            content="# Test Document\n\nThis is a test paragraph with enough content to be meaningful.",
+            content=content,
             filename="test.md",
             doc_type="markdown",
         )

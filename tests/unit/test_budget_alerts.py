@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from graphmind.observability.cost_tracker import BudgetAlert, CostTracker, PRICING_PER_1M_TOKENS
+from graphmind.observability.cost_tracker import BudgetAlert, CostTracker
 
 
 class TestBudgetAlertDataclass:
@@ -69,7 +69,7 @@ class TestNoDuplicateAlerts:
 
         # Second call adds more cost but should not re-fire same alerts
         tracker.record("groq", "llama", 1_000_000, 0)
-        count_after_second = len(tracker.alerts)
+        len(tracker.alerts)
 
         # Global alerts should not duplicate (80% and 100% fired once each)
         global_alerts = [a for a in tracker.alerts if a.tenant_id == ""]

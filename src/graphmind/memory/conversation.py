@@ -1,20 +1,25 @@
 """Session-based conversation memory for multi-turn dialogue."""
+
 from __future__ import annotations
+
 import time
-import structlog
 from collections import OrderedDict
 from dataclasses import dataclass, field
+
+import structlog
 
 logger = structlog.get_logger(__name__)
 
 _MAX_SESSIONS = 1000
 _SESSION_TTL = 3600  # 1 hour
 
+
 @dataclass
 class Message:
     role: str
     content: str
     timestamp: float = field(default_factory=time.time)
+
 
 @dataclass
 class Session:
@@ -34,6 +39,7 @@ class Session:
     @property
     def is_expired(self) -> bool:
         return (time.time() - self.last_access) > _SESSION_TTL
+
 
 class ConversationStore:
     def __init__(self, max_sessions: int = _MAX_SESSIONS, ttl: int = _SESSION_TTL) -> None:
@@ -68,7 +74,9 @@ class ConversationStore:
         self._evict_expired()
         return len(self._sessions)
 
+
 _store: ConversationStore | None = None
+
 
 def get_conversation_store() -> ConversationStore:
     global _store

@@ -12,13 +12,13 @@ Creates a fully configured FastAPI application with:
 
 from __future__ import annotations
 
-import structlog
 import time
 import uuid as uuid_mod
 from collections import OrderedDict
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+import structlog
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,6 +38,7 @@ _RATE_LIMIT_MAX_CLIENTS = 10_000
 # ---------------------------------------------------------------------------
 # Lifespan — initialise shared resources on startup, release on shutdown
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -67,10 +68,12 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Middleware — request logging
 # ---------------------------------------------------------------------------
 
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
         request_id = request.headers.get(
-            "X-Request-ID", str(uuid_mod.uuid4())[:8],
+            "X-Request-ID",
+            str(uuid_mod.uuid4())[:8],
         )
         # Store on request.state for downstream use (error handler, audit)
         request.state.request_id = request_id
@@ -95,6 +98,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 # Middleware — API key authentication (optional)
 # ---------------------------------------------------------------------------
 
+
 class APIKeyMiddleware(BaseHTTPMiddleware):
     _PUBLIC_PATHS = {"/api/v1/health", "/docs", "/redoc", "/openapi.json", "/metrics"}
 
@@ -106,12 +110,13 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         if request.url.path in self._PUBLIC_PATHS:
             return await call_next(request)
 
-        provided = (
-            request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-        )
+        provided = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
         if provided != settings.api_key:
             return Response(
-                content='{"error":{"code":"AUTHENTICATION_ERROR","message":"Invalid or missing API key"}}',
+                content=(
+                    '{"error":{"code":"AUTHENTICATION_ERROR",'
+                    '"message":"Invalid or missing API key"}}'
+                ),
                 status_code=401,
                 media_type="application/json",
             )
@@ -121,6 +126,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 # ---------------------------------------------------------------------------
 # Middleware — sliding-window rate limiter with bounded memory
 # ---------------------------------------------------------------------------
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Per-client-IP sliding-window rate limiter.
@@ -173,6 +179,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 # Middleware — request body size limit
 # ---------------------------------------------------------------------------
 
+
 class BodySizeLimitMiddleware(BaseHTTPMiddleware):
     """Reject requests whose Content-Length exceeds a configurable limit."""
 
@@ -184,7 +191,10 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > self._max_bytes:
             return Response(
-                content='{"error":{"code":"PAYLOAD_TOO_LARGE","message":"Request body exceeds size limit"}}',
+                content=(
+                    '{"error":{"code":"PAYLOAD_TOO_LARGE",'
+                    '"message":"Request body exceeds size limit"}}'
+                ),
                 status_code=413,
                 media_type="application/json",
             )
@@ -194,6 +204,7 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
 # ---------------------------------------------------------------------------
 # Application factory
 # ---------------------------------------------------------------------------
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Create a fully configured FastAPI application.
@@ -238,6 +249,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     otel_endpoint = getattr(settings, "otel_endpoint", None) or None
     try:
         from graphmind.observability.otel import setup_otel
+
         setup_otel(app, endpoint=otel_endpoint)
     except Exception:
         logger.debug("OpenTelemetry not configured or unavailable")

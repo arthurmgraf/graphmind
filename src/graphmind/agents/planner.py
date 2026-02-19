@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import structlog
-
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from graphmind.agents.states import AgentState
@@ -29,7 +28,7 @@ async def planner_node(state: AgentState, router: LLMRouter) -> dict:
     ]
 
     response = await router.ainvoke(messages)
-    raw = response.content.strip()
+    raw = response.content.strip()  # type: ignore[union-attr]
 
     sub_questions = [q.strip() for q in raw.split("\n") if q.strip()]
 

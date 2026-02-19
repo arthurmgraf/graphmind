@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import structlog
 import time
 
+import structlog
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
@@ -31,8 +31,8 @@ async def handle_query(request: QueryRequest, req: Request) -> QueryResponse:
     start = time.perf_counter()
 
     # --- injection detection (pre-LLM guard) ---
-    if _feature_flags.is_enabled("injection_detection"):
-        result_check = _injection_detector.check(request.question)
+    if _feature_flags.is_active("injection_detection_enabled"):
+        result_check = _injection_detector.detect(request.question)
         if result_check.is_suspicious:
             logger.warning(
                 "Injection detected in query: patterns=%s",
@@ -75,8 +75,7 @@ async def handle_query(request: QueryRequest, req: Request) -> QueryResponse:
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         citations = [
-            Citation(**c) if isinstance(c, dict) else c
-            for c in result.get("citations", [])
+            Citation(**c) if isinstance(c, dict) else c for c in result.get("citations", [])
         ]
 
         # --- cost tracking (extract actual tokens from LLM response metadata) ---
@@ -85,13 +84,13 @@ async def handle_query(request: QueryRequest, req: Request) -> QueryResponse:
         input_tokens = (
             usage.get("prompt_tokens")
             or usage.get("prompt_eval_count")  # Ollama
-            or usage.get("input_tokens")       # Gemini
+            or usage.get("input_tokens")  # Gemini
             or result.get("input_tokens", 0)
         )
         output_tokens = (
             usage.get("completion_tokens")
-            or usage.get("eval_count")         # Ollama
-            or usage.get("output_tokens")      # Gemini
+            or usage.get("eval_count")  # Ollama
+            or usage.get("output_tokens")  # Gemini
             or result.get("output_tokens", 0)
         )
         # Fallback: if metadata unavailable, estimate from total
@@ -178,29 +177,40 @@ async def handle_query_stream(request: QueryRequest, req: Request) -> StreamingR
                 router=resources.llm_router,
             )
 
-            yield _sse_event("retrieving", {
-                "sources_found": len(result.get("documents", [])),
-            })
+            yield _sse_event(
+                "retrieving",
+                {
+                    "sources_found": len(result.get("documents", [])),
+                },
+            )
 
-            yield _sse_event("generating", {
-                "answer": result.get("generation", ""),
-            })
+            yield _sse_event(
+                "generating",
+                {
+                    "answer": result.get("generation", ""),
+                },
+            )
 
-            yield _sse_event("evaluating", {
-                "eval_score": result.get("eval_score", 0.0),
-            })
+            yield _sse_event(
+                "evaluating",
+                {
+                    "eval_score": result.get("eval_score", 0.0),
+                },
+            )
 
             citations = [
-                c if isinstance(c, dict) else c.model_dump()
-                for c in result.get("citations", [])
+                c if isinstance(c, dict) else c.model_dump() for c in result.get("citations", [])
             ]
 
-            yield _sse_event("done", {
-                "answer": result.get("generation", ""),
-                "citations": citations,
-                "eval_score": result.get("eval_score", 0.0),
-                "provider": result.get("provider_used", ""),
-            })
+            yield _sse_event(
+                "done",
+                {
+                    "answer": result.get("generation", ""),
+                    "citations": citations,
+                    "eval_score": result.get("eval_score", 0.0),
+                    "provider": result.get("provider_used", ""),
+                },
+            )
 
         except Exception as exc:
             logger.exception("Streaming query failed")

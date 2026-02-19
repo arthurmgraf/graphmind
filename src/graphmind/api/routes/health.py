@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import structlog
 import time
 
 import httpx
+import structlog
 from fastapi import APIRouter, Request
 
 from graphmind.config import get_settings

@@ -3,11 +3,14 @@
 Runs synchronously before NeMo guardrails (which requires an LLM call).
 Patterns are configurable via YAML.
 """
+
 from __future__ import annotations
-import re
+
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -32,11 +35,13 @@ _DEFAULT_PATTERNS = [
     r"MERGE\s*\(.*\)\s*SET",  # Cypher injection attempt
 ]
 
+
 @dataclass
 class InjectionDetectionResult:
     is_suspicious: bool = False
     matched_patterns: list[str] = field(default_factory=list)
     input_text: str = ""
+
 
 class InjectionDetector:
     def __init__(self, patterns: list[str] | None = None, config_path: Path | None = None) -> None:
@@ -50,7 +55,7 @@ class InjectionDetector:
 
     def detect(self, text: str) -> InjectionDetectionResult:
         matched: list[str] = []
-        for pattern, compiled in zip(self._patterns, self._compiled):
+        for pattern, compiled in zip(self._patterns, self._compiled, strict=False):
             if compiled.search(text):
                 matched.append(pattern)
         result = InjectionDetectionResult(
@@ -65,7 +70,9 @@ class InjectionDetector:
             )
         return result
 
+
 _detector: InjectionDetector | None = None
+
 
 def get_injection_detector() -> InjectionDetector:
     global _detector

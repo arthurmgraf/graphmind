@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
-import structlog
 from dataclasses import dataclass
 from pathlib import Path
+
+import structlog
 
 from graphmind.evaluation.eval_models import GroqEvalModel
 

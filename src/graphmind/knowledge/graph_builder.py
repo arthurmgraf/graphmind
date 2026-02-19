@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import structlog
-import random
 import asyncio
+import random
 
+import structlog
 from neo4j import AsyncDriver, AsyncGraphDatabase
 from neo4j.exceptions import Neo4jError, ServiceUnavailable, TransientError
 
@@ -83,7 +83,7 @@ async def _retry_neo4j(func, *args, **kwargs):
             return await func(*args, **kwargs)
         except _RETRIABLE as exc:
             last_error = exc
-            wait = _BACKOFF_BASE * (2 ** attempt) * random.uniform(0.5, 1.5)
+            wait = _BACKOFF_BASE * (2**attempt) * random.uniform(0.5, 1.5)
             logger.warning(
                 "Neo4j operation failed (attempt %d/%d): %s — retrying in %.1fs",
                 attempt + 1,
@@ -135,7 +135,9 @@ class GraphBuilder:
             for entity in entities:
                 try:
                     success = await _retry_neo4j(
-                        self._run_upsert_entity, session, entity,
+                        self._run_upsert_entity,
+                        session,
+                        entity,
                     )
                     if success:
                         upserted += 1
@@ -166,7 +168,9 @@ class GraphBuilder:
             for relation in relations:
                 try:
                     success = await _retry_neo4j(
-                        self._run_upsert_relation, session, relation,
+                        self._run_upsert_relation,
+                        session,
+                        relation,
                     )
                     if success:
                         upserted += 1
@@ -230,5 +234,10 @@ class GraphBuilder:
     async def __aenter__(self) -> GraphBuilder:
         return self
 
-    async def __aexit__(self, exc_type: type | None, exc_val: BaseException | None, exc_tb: object) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         await self.close()

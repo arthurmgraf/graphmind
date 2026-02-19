@@ -1,5 +1,7 @@
 """Async webhook dispatcher with retry and HMAC verification."""
+
 from __future__ import annotations
+
 import asyncio
 import hashlib
 import hmac
@@ -8,9 +10,11 @@ import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
+
 import httpx
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class WebhookRegistration:
@@ -19,6 +23,7 @@ class WebhookRegistration:
     events: list[str]
     secret: str = ""
     created_at: float = field(default_factory=time.time)
+
 
 @dataclass
 class WebhookDelivery:
@@ -29,6 +34,7 @@ class WebhookDelivery:
     attempts: int = 0
     error: str = ""
     delivered_at: float = field(default_factory=time.time)
+
 
 class WebhookDispatcher:
     def __init__(self) -> None:
@@ -59,7 +65,12 @@ class WebhookDispatcher:
             self._deliveries.append(delivery)
         return deliveries
 
-    async def _deliver(self, reg: WebhookRegistration, event: str, data: dict[str, Any]) -> WebhookDelivery:
+    async def _deliver(
+        self,
+        reg: WebhookRegistration,
+        event: str,
+        data: dict[str, Any],
+    ) -> WebhookDelivery:
         payload = json.dumps({"event": event, "data": data, "timestamp": time.time()}).encode()
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if reg.secret:
@@ -70,25 +81,56 @@ class WebhookDispatcher:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     resp = await client.post(reg.url, content=payload, headers=headers)
                 if resp.status_code < 400:
-                    return WebhookDelivery(webhook_id=reg.id, event=event, status_code=resp.status_code, success=True, attempts=attempt + 1)
+                    return WebhookDelivery(
+                        webhook_id=reg.id,
+                        event=event,
+                        status_code=resp.status_code,
+                        success=True,
+                        attempts=attempt + 1,
+                    )
                 if resp.status_code >= 500:
-                    await asyncio.sleep(self._backoff_base * (2 ** attempt))
+                    await asyncio.sleep(self._backoff_base * (2**attempt))
                     continue
-                return WebhookDelivery(webhook_id=reg.id, event=event, status_code=resp.status_code, success=False, attempts=attempt + 1, error=f"HTTP {resp.status_code}")
+                return WebhookDelivery(
+                    webhook_id=reg.id,
+                    event=event,
+                    status_code=resp.status_code,
+                    success=False,
+                    attempts=attempt + 1,
+                    error=f"HTTP {resp.status_code}",
+                )
             except Exception as exc:
                 if attempt < self._max_retries - 1:
-                    await asyncio.sleep(self._backoff_base * (2 ** attempt))
+                    await asyncio.sleep(self._backoff_base * (2**attempt))
                     continue
-                return WebhookDelivery(webhook_id=reg.id, event=event, success=False, attempts=attempt + 1, error=str(exc))
-        return WebhookDelivery(webhook_id=reg.id, event=event, success=False, attempts=self._max_retries, error="max retries exceeded")
+                return WebhookDelivery(
+                    webhook_id=reg.id,
+                    event=event,
+                    success=False,
+                    attempts=attempt + 1,
+                    error=str(exc),
+                )
+        return WebhookDelivery(
+            webhook_id=reg.id,
+            event=event,
+            success=False,
+            attempts=self._max_retries,
+            error="max retries exceeded",
+        )
 
-    def get_deliveries(self, webhook_id: str | None = None, limit: int = 50) -> list[WebhookDelivery]:
+    def get_deliveries(
+        self,
+        webhook_id: str | None = None,
+        limit: int = 50,
+    ) -> list[WebhookDelivery]:
         deliveries = self._deliveries
         if webhook_id:
             deliveries = [d for d in deliveries if d.webhook_id == webhook_id]
         return deliveries[-limit:]
 
+
 _dispatcher: WebhookDispatcher | None = None
+
 
 def get_webhook_dispatcher() -> WebhookDispatcher:
     global _dispatcher

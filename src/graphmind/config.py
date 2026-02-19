@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import structlog
 import os
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Self
 
+import structlog
 import yaml
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
@@ -101,9 +101,7 @@ class IngestionSettings(BaseSettings):
     chunk_overlap: int = 50
     max_document_size_bytes: int = 10 * 1024 * 1024  # 10 MB
     max_concurrent_chunks: int = 10
-    supported_formats: list[str] = Field(
-        default=["pdf", "md", "html", "txt", "py", "ts", "js"]
-    )
+    supported_formats: list[str] = Field(default=["pdf", "md", "html", "txt", "py", "ts", "js"])
 
 
 class Settings(BaseSettings):
@@ -127,9 +125,7 @@ class Settings(BaseSettings):
     langfuse_secret_key: str = ""
 
     api_key: str = ""
-    cors_origins: list[str] = Field(
-        default=["http://localhost:8501", "http://localhost:3000"]
-    )
+    cors_origins: list[str] = Field(default=["http://localhost:8501", "http://localhost:3000"])
     rate_limit_rpm: int = 60
 
     llm_primary: LLMProviderSettings = Field(
@@ -153,9 +149,7 @@ class Settings(BaseSettings):
     retrieval: RetrievalSettings = Field(
         default_factory=lambda: RetrievalSettings(**_yaml.get("retrieval", {}))
     )
-    agents: AgentSettings = Field(
-        default_factory=lambda: AgentSettings(**_yaml.get("agents", {}))
-    )
+    agents: AgentSettings = Field(default_factory=lambda: AgentSettings(**_yaml.get("agents", {})))
     ingestion: IngestionSettings = Field(
         default_factory=lambda: IngestionSettings(**_yaml.get("ingestion", {}))
     )

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import structlog
 import time
 
+import structlog
 from fastapi import APIRouter, Request
 
 from graphmind.errors import PipelineError, ValidationError
@@ -36,10 +36,14 @@ async def handle_ingest(request: IngestRequest, req: Request) -> IngestResponse:
     # Content-hash deduplication check
     if resources.vector_retriever is not None:
         import hashlib
+
         content_hash = hashlib.sha256(request.content.encode("utf-8")).hexdigest()
         existing_id = await resources.vector_retriever.find_by_content_hash(content_hash)
         if existing_id:
-            logger.info("Duplicate document detected (hash=%s), returning existing ID", content_hash[:12])
+            logger.info(
+                "Duplicate document detected (hash=%s), returning existing ID",
+                content_hash[:12],
+            )
             return IngestResponse(
                 document_id=existing_id,
                 duplicate=True,

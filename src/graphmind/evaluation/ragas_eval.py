@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
-import structlog
 from pathlib import Path
+
+import structlog
 
 logger = structlog.get_logger(__name__)
 

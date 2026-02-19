@@ -1,4 +1,5 @@
 """Graph visualization endpoints for D3.js-compatible data."""
+
 from __future__ import annotations
 
 import structlog

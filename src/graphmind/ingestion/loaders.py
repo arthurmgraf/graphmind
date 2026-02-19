@@ -39,9 +39,7 @@ class DocumentLoader:
     def _validate_format(self, fmt: str) -> None:
         supported = self._settings.ingestion.supported_formats
         if fmt not in supported:
-            raise UnsupportedFormatError(
-                f"Format '{fmt}' is not in supported formats: {supported}"
-            )
+            raise UnsupportedFormatError(f"Format '{fmt}' is not in supported formats: {supported}")
 
     def _load_pdf(self, path_or_content: str) -> str:
         import fitz
@@ -68,10 +66,7 @@ class DocumentLoader:
     def _load_code(self, path_or_content: str, fmt: str) -> str:
         lang = _CODE_EXTENSIONS[fmt]
         path = Path(path_or_content)
-        if path.exists():
-            source = path.read_text(encoding="utf-8")
-        else:
-            source = path_or_content
+        source = path.read_text(encoding="utf-8") if path.exists() else path_or_content
         return f"```{lang}\n{source}\n```"
 
 

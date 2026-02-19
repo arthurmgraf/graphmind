@@ -3,6 +3,7 @@
 Call ``configure_logging()`` during application startup to set up
 structured logging across all modules.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,7 @@ def configure_logging(*, json_output: bool = False, log_level: str = "INFO") -> 
     if json_output:
         renderer = structlog.processors.JSONRenderer()
     else:
-        renderer = structlog.dev.ConsoleRenderer()
+        renderer = structlog.dev.ConsoleRenderer()  # type: ignore[assignment]
 
     structlog.configure(
         processors=[

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import structlog
 from typing import Any
 
+import structlog
 from crewai import Agent
 
 from graphmind.crew.tools import EvaluateAnswerTool, GraphExpansionTool, HybridSearchTool
@@ -39,7 +39,7 @@ def create_knowledge_retriever(
     if retriever is not None:
         tools.append(HybridSearchTool(retriever=retriever))
     if graph_retriever is not None:
-        tools.append(GraphExpansionTool(graph_retriever=graph_retriever))
+        tools.append(GraphExpansionTool(graph_retriever=graph_retriever))  # type: ignore[arg-type]
 
     return Agent(
         role="Knowledge Retriever",

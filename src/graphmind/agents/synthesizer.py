@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import structlog
-
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from graphmind.agents.states import AgentState
@@ -34,7 +33,8 @@ async def synthesizer_node(state: AgentState, router: LLMRouter) -> dict:
     context_parts = []
     for i, doc in enumerate(documents[:10]):
         source_label = doc.source or doc.id[:8]
-        context_parts.append(f"[Document {i + 1} | ID: {doc.id[:8]} | Source: {source_label}]\n{doc.text}")
+        header = f"[Document {i + 1} | ID: {doc.id[:8]} | Source: {source_label}]"
+        context_parts.append(f"{header}\n{doc.text}")
 
     context = "\n\n---\n\n".join(context_parts)
 
@@ -44,7 +44,7 @@ async def synthesizer_node(state: AgentState, router: LLMRouter) -> dict:
     ]
 
     response = await router.ainvoke(messages)
-    answer = response.content.strip()
+    answer = response.content.strip()  # type: ignore[union-attr]
 
     # Extract token usage from LLM response metadata
     usage: dict = {}

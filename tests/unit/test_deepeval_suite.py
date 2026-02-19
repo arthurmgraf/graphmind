@@ -8,7 +8,9 @@ from graphmind.evaluation.deepeval_suite import EvalResult, evaluate_single, gen
 class TestEvaluateSingle:
     def test_parses_valid_json_response(self):
         eval_model = MagicMock()
-        eval_model.generate.return_value = '{"relevancy": 0.9, "groundedness": 0.85, "completeness": 0.8}'
+        eval_model.generate.return_value = (
+            '{"relevancy": 0.9, "groundedness": 0.85, "completeness": 0.8}'
+        )
 
         result = evaluate_single(
             question="What is LangGraph?",
@@ -26,10 +28,14 @@ class TestEvaluateSingle:
 
     def test_handles_json_with_markdown_fences(self):
         eval_model = MagicMock()
-        eval_model.generate.return_value = '```json\n{"relevancy": 0.7, "groundedness": 0.7, "completeness": 0.7}\n```'
+        eval_model.generate.return_value = (
+            '```json\n{"relevancy": 0.7, "groundedness": 0.7, "completeness": 0.7}\n```'
+        )
 
         result = evaluate_single(
-            question="test", answer="test", context=["ctx"],
+            question="test",
+            answer="test",
+            context=["ctx"],
             eval_model=eval_model,
         )
         assert result.relevancy == 0.7
@@ -39,7 +45,9 @@ class TestEvaluateSingle:
         eval_model.generate.return_value = "not valid json"
 
         result = evaluate_single(
-            question="test", answer="test", context=["ctx"],
+            question="test",
+            answer="test",
+            context=["ctx"],
             eval_model=eval_model,
         )
         assert result.relevancy == 0.5
@@ -48,11 +56,16 @@ class TestEvaluateSingle:
 
     def test_below_threshold_fails(self):
         eval_model = MagicMock()
-        eval_model.generate.return_value = '{"relevancy": 0.3, "groundedness": 0.3, "completeness": 0.3}'
+        eval_model.generate.return_value = (
+            '{"relevancy": 0.3, "groundedness": 0.3, "completeness": 0.3}'
+        )
 
         result = evaluate_single(
-            question="test", answer="test", context=["ctx"],
-            eval_model=eval_model, threshold=0.7,
+            question="test",
+            answer="test",
+            context=["ctx"],
+            eval_model=eval_model,
+            threshold=0.7,
         )
         assert result.passed is False
 

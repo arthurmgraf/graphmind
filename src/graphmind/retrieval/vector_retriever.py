@@ -49,9 +49,7 @@ class VectorRetriever:
 
     async def index(self, chunk_id: str, vector: list[float], payload: dict) -> None:
         if len(vector) != self._dimensions:
-            raise ValueError(
-                f"Vector dimension {len(vector)} != expected {self._dimensions}"
-            )
+            raise ValueError(f"Vector dimension {len(vector)} != expected {self._dimensions}")
         point = PointStruct(
             id=chunk_id,
             vector=vector,
@@ -74,7 +72,7 @@ class VectorRetriever:
                 must=[FieldCondition(key="tenant_id", match=MatchValue(value=tenant_id))]
             )
 
-        hits = await self._client.search(
+        hits = await self._client.search(  # type: ignore[attr-defined]
             collection_name=self._collection,
             query_vector=query_vector,
             limit=limit,
@@ -105,7 +103,7 @@ class VectorRetriever:
         )
         points = results[0]
         if points:
-            return points[0].payload.get("document_id", str(points[0].id))
+            return points[0].payload.get("document_id", str(points[0].id))  # type: ignore[union-attr]
         return None
 
     async def close(self) -> None:
