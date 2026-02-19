@@ -10,13 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install build-only dependencies
-RUN pip install --no-cache-dir hatchling
+# Use uv for fast dependency resolution (avoids pip resolution-too-deep)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 COPY pyproject.toml README.md ./
 COPY src/ src/
 
-RUN pip install --no-cache-dir --prefix=/install .
+RUN uv pip install --no-cache --system --prefix=/install .
 
 # ---------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
