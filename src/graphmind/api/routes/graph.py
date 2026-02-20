@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import structlog
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
+
+from graphmind.security.rbac import Permission, require_permission
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1")
 
 
-@router.get("/graph/explore")
+@router.get(
+    "/graph/explore",
+    dependencies=[Depends(require_permission(Permission.VIEW_STATS))],
+)
 async def explore_graph(
     request: Request,
     entity: str = Query(..., min_length=1, description="Entity name to explore"),
@@ -73,10 +78,13 @@ async def explore_graph(
 
     except Exception as exc:
         logger.error("graph_explore_failed", entity=entity, error=str(exc))
-        return {"nodes": [], "links": [], "error": str(exc)}
+        return {"nodes": [], "links": [], "error": "Graph exploration failed"}
 
 
-@router.get("/graph/entity-types")
+@router.get(
+    "/graph/entity-types",
+    dependencies=[Depends(require_permission(Permission.VIEW_STATS))],
+)
 async def get_entity_types(request: Request) -> dict:
     """Return counts of each entity type in the knowledge graph."""
     resources = request.app.state.resources
@@ -96,4 +104,4 @@ async def get_entity_types(request: Request) -> dict:
             return {"types": types}
     except Exception as exc:
         logger.error("entity_types_failed", error=str(exc))
-        return {"types": {}, "error": str(exc)}
+        return {"types": {}, "error": "Failed to fetch entity types"}

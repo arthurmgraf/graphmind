@@ -154,6 +154,18 @@ class Settings(BaseSettings):
         default_factory=lambda: IngestionSettings(**_yaml.get("ingestion", {}))
     )
 
+    @property
+    def graphmind_env(self) -> str:
+        return os.getenv("GRAPHMIND_ENV", "dev").lower()
+
+    @property
+    def is_production(self) -> bool:
+        return self.graphmind_env in ("production", "staging")
+
+    @property
+    def debug(self) -> bool:
+        return self.graphmind_env in ("dev", "test")
+
     @model_validator(mode="after")
     def _validate_required_secrets(self) -> Self:
         if not self.groq_api_key and not self.gemini_api_key:
@@ -163,6 +175,11 @@ class Settings(BaseSettings):
             )
         if not self.neo4j_password:
             logger.warning("NEO4J_PASSWORD is not set; graph operations will fail")
+        if not self.api_key and self.is_production:
+            logger.error(
+                "API_KEY is not set in %s environment — all requests will be rejected",
+                self.graphmind_env,
+            )
         return self
 
 

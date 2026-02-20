@@ -13,6 +13,8 @@ from typing import Any
 
 import httpx
 
+from graphmind.security.ssrf import SSRFError, validate_webhook_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,6 +46,7 @@ class WebhookDispatcher:
         self._backoff_base = 1.0
 
     def register(self, registration: WebhookRegistration) -> None:
+        validate_webhook_url(registration.url)
         self._registrations[registration.id] = registration
         logger.info("Webhook registered: %s -> %s", registration.id, registration.url)
 
@@ -75,6 +78,19 @@ class WebhookDispatcher:
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if reg.secret:
             headers["X-Webhook-Signature"] = self._sign_payload(payload, reg.secret)
+
+        # Re-validate URL at dispatch time (DNS rebinding defense)
+        try:
+            validate_webhook_url(reg.url)
+        except SSRFError as exc:
+            logger.warning("SSRF blocked at dispatch: %s -> %s", reg.id, exc)
+            return WebhookDelivery(
+                webhook_id=reg.id,
+                event=event,
+                success=False,
+                attempts=0,
+                error="SSRF: URL targets private/internal resource",
+            )
 
         for attempt in range(self._max_retries):
             try:

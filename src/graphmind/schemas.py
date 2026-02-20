@@ -121,6 +121,14 @@ class IngestRequest(BaseModel):
     doc_type: str = "markdown"
     tenant_id: str | None = Field(default=None, description="Tenant ID for multi-tenancy")
 
+    @field_validator("doc_type")
+    @classmethod
+    def _validate_doc_type(cls, v: str) -> str:
+        allowed = {"pdf", "md", "markdown", "html", "txt", "py", "ts", "js"}
+        if v not in allowed:
+            raise ValueError(f"doc_type must be one of {sorted(allowed)}")
+        return v
+
 
 class IngestResponse(BaseModel):
     document_id: str

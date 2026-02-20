@@ -15,23 +15,28 @@ from mcp.types import (
     Tool,
 )
 from neo4j import AsyncGraphDatabase
+from pydantic import ValidationError
 from qdrant_client import AsyncQdrantClient
 
 from graphmind.agents.orchestrator import run_query
 from graphmind.config import Settings, get_settings
 from graphmind.ingestion.pipeline import IngestionPipeline
 from graphmind.knowledge.graph_builder import GraphBuilder
+from graphmind.safety.injection_detector import InjectionDetector
 from graphmind.schemas import (
     Citation,
     GraphStats,
     HealthResponse,
+    IngestRequest,
     IngestResponse,
+    QueryRequest,
     QueryResponse,
 )
 
 logger = structlog.get_logger(__name__)
 
 server = Server("graphmind")
+_injection_detector = InjectionDetector()
 
 
 @server.list_tools()
@@ -131,26 +136,48 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> Sequence[Tex
             return await _handle_graph_stats()
         if name == "health":
             return await _handle_health()
-    except Exception as exc:
+    except Exception:
         logger.exception("Tool '%s' failed", name)
-        return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
+        return [TextContent(type="text", text=json.dumps({"error": "Tool execution failed"}))]
 
     return [TextContent(type="text", text=json.dumps({"error": f"Unknown tool: {name}"}))]
 
 
 async def _handle_query(arguments: dict[str, Any]) -> list[TextContent]:
-    question: str = arguments["question"]
-    top_k: int = arguments.get("top_k", 10)
-    engine: str = arguments.get("engine", "langgraph")
+    # Validate input via Pydantic (reuse REST schema)
+    try:
+        validated = QueryRequest(
+            question=arguments.get("question", ""),
+            top_k=arguments.get("top_k", 10),
+            engine=arguments.get("engine", "langgraph"),
+        )
+    except ValidationError as exc:
+        return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
+
+    # Injection detection (same safety layer as REST API)
+    check_result = _injection_detector.detect(validated.question)
+    if check_result.is_suspicious:
+        logger.warning("MCP injection detected: patterns=%s", check_result.matched_patterns)
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "error": "Potential prompt injection detected",
+                        "patterns": check_result.matched_patterns,
+                    }
+                ),
+            )
+        ]
 
     logger.info(
         "MCP query tool invoked with question: %s (top_k=%d, engine=%s)",
-        question,
-        top_k,
-        engine,
+        validated.question,
+        validated.top_k,
+        validated.engine,
     )
 
-    result = await run_query(question=question, engine=engine)
+    result = await run_query(question=validated.question, engine=validated.engine)
 
     citations = [Citation(**c) if isinstance(c, dict) else c for c in result.get("citations", [])]
 
@@ -178,9 +205,19 @@ async def _handle_query(arguments: dict[str, Any]) -> list[TextContent]:
 
 
 async def _handle_ingest(arguments: dict[str, Any]) -> list[TextContent]:
-    content: str = arguments["content"]
-    filename: str = arguments["filename"]
-    doc_type: str = arguments.get("doc_type", "md")
+    # Validate input via Pydantic (reuse REST schema)
+    try:
+        validated = IngestRequest(
+            content=arguments.get("content", ""),
+            filename=arguments.get("filename", ""),
+            doc_type=arguments.get("doc_type", "md"),
+        )
+    except ValidationError as exc:
+        return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
+
+    content = validated.content
+    filename = validated.filename
+    doc_type = validated.doc_type
 
     logger.info("MCP ingest tool invoked for file: %s (type=%s)", filename, doc_type)
 
@@ -240,7 +277,7 @@ async def _handle_health() -> list[TextContent]:
         services["neo4j"] = "ok"
     except Exception as exc:
         logger.error("Neo4j health check failed: %s", exc)
-        services["neo4j"] = f"error: {exc}"
+        services["neo4j"] = "unhealthy"
 
     try:
         client = AsyncQdrantClient(
@@ -252,7 +289,7 @@ async def _handle_health() -> list[TextContent]:
         services["qdrant"] = "ok"
     except Exception as exc:
         logger.error("Qdrant health check failed: %s", exc)
-        services["qdrant"] = f"error: {exc}"
+        services["qdrant"] = "unhealthy"
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as http_client:
@@ -261,7 +298,7 @@ async def _handle_health() -> list[TextContent]:
         services["ollama"] = "ok"
     except Exception as exc:
         logger.error("Ollama health check failed: %s", exc)
-        services["ollama"] = f"error: {exc}"
+        services["ollama"] = "unhealthy"
 
     all_ok = all(v == "ok" for v in services.values())
     response = HealthResponse(

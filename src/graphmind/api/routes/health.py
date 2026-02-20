@@ -32,7 +32,7 @@ async def _check_neo4j(request: Request) -> str:
         return "healthy"
     except Exception as exc:
         logger.warning("Neo4j health check failed: %s", exc)
-        return f"unhealthy: {exc}"
+        return "unhealthy"
 
 
 async def _check_qdrant(request: Request) -> str:
@@ -45,7 +45,7 @@ async def _check_qdrant(request: Request) -> str:
         return "healthy"
     except Exception as exc:
         logger.warning("Qdrant health check failed: %s", exc)
-        return f"unhealthy: {exc}"
+        return "unhealthy"
 
 
 async def _check_ollama() -> str:
@@ -57,7 +57,7 @@ async def _check_ollama() -> str:
         return "healthy"
     except Exception as exc:
         logger.warning("Ollama health check failed: %s", exc)
-        return f"unhealthy: {exc}"
+        return "unhealthy"
 
 
 @router.get("/health", response_model=HealthResponse)

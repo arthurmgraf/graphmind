@@ -28,6 +28,8 @@ from graphmind.config import Settings, get_settings
 from graphmind.dependencies import Resources, set_resources
 from graphmind.errors import register_exception_handlers
 from graphmind.observability.logging_config import configure_logging
+from graphmind.security.auth import AuthMiddleware
+from graphmind.security.rbac import RBACRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -45,7 +47,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     resources: Resources = app.state.resources
     settings = resources.settings
 
-    json_logs = settings.api_key != ""  # JSON in production (when auth is enabled)
+    json_logs = settings.is_production
     configure_logging(json_output=json_logs)
 
     logger.info(
@@ -92,35 +94,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         )
         response.headers["X-Request-ID"] = request_id
         return response
-
-
-# ---------------------------------------------------------------------------
-# Middleware — API key authentication (optional)
-# ---------------------------------------------------------------------------
-
-
-class APIKeyMiddleware(BaseHTTPMiddleware):
-    _PUBLIC_PATHS = {"/api/v1/health", "/docs", "/redoc", "/openapi.json", "/metrics"}
-
-    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-        settings = request.app.state.resources.settings
-        if not settings.api_key:
-            return await call_next(request)
-
-        if request.url.path in self._PUBLIC_PATHS:
-            return await call_next(request)
-
-        provided = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-        if provided != settings.api_key:
-            return Response(
-                content=(
-                    '{"error":{"code":"AUTHENTICATION_ERROR",'
-                    '"message":"Invalid or missing API key"}}'
-                ),
-                status_code=401,
-                media_type="application/json",
-            )
-        return await call_next(request)
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +200,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.resources = Resources(settings=settings)
 
     # --- Exception handlers (structured error responses) ---
-    debug = settings.api_key == ""  # debug mode when no auth is set
-    register_exception_handlers(app, debug=debug)
+    register_exception_handlers(app, debug=settings.debug)
 
     # --- CORS ---
     app.add_middleware(
@@ -240,8 +212,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     # --- Middleware stack (order: outermost first) ---
+    rbac_registry = RBACRegistry()
+    app.state.rbac_registry = rbac_registry
+
     app.add_middleware(RequestLoggingMiddleware)
-    app.add_middleware(APIKeyMiddleware)
+    app.add_middleware(AuthMiddleware, registry=rbac_registry)
     app.add_middleware(RateLimitMiddleware, rpm=settings.rate_limit_rpm)
     app.add_middleware(BodySizeLimitMiddleware, max_bytes=15 * 1024 * 1024)
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, Response
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
@@ -10,6 +10,8 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+
+from graphmind.security.rbac import Permission, require_permission
 
 # ---------------------------------------------------------------------------
 # Prometheus metric definitions
@@ -51,7 +53,10 @@ CIRCUIT_STATE = Gauge(
 router = APIRouter()
 
 
-@router.get("/metrics")
+@router.get(
+    "/metrics",
+    dependencies=[Depends(require_permission(Permission.VIEW_METRICS))],
+)
 async def prometheus_metrics() -> Response:
     """Expose all registered Prometheus metrics in the standard exposition format."""
     return Response(

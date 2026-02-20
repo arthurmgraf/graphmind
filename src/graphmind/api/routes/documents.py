@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
+
+from graphmind.security.rbac import Permission, require_permission
 
 logger = structlog.get_logger(__name__)
 
@@ -43,7 +45,11 @@ def _paginate(items: list[Any], page: int, per_page: int) -> PaginatedResponse:
     )
 
 
-@router.get("/documents", response_model=PaginatedResponse)
+@router.get(
+    "/documents",
+    response_model=PaginatedResponse,
+    dependencies=[Depends(require_permission(Permission.VIEW_STATS))],
+)
 async def list_documents(
     request: Request,
     page: int = Query(default=1, ge=1, description="Page number"),
@@ -74,12 +80,16 @@ async def list_documents(
 
         return _paginate(documents, page, per_page)
 
-    except Exception as exc:
-        logger.error("list_documents_failed", error=str(exc))
+    except Exception:
+        logger.error("list_documents_failed")
         return PaginatedResponse()
 
 
-@router.get("/jobs", response_model=PaginatedResponse)
+@router.get(
+    "/jobs",
+    response_model=PaginatedResponse,
+    dependencies=[Depends(require_permission(Permission.VIEW_STATS))],
+)
 async def list_jobs(
     request: Request,
     page: int = Query(default=1, ge=1, description="Page number"),

@@ -5,12 +5,13 @@ from __future__ import annotations
 import time
 
 import structlog
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 
 from graphmind.errors import PipelineError, ValidationError
 from graphmind.ingestion.pipeline import IngestionPipeline
 from graphmind.observability.audit import AuditLogger
 from graphmind.schemas import IngestRequest, IngestResponse
+from graphmind.security.rbac import Permission, require_permission
 
 _audit = AuditLogger()
 
@@ -19,7 +20,11 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1")
 
 
-@router.post("/ingest", response_model=IngestResponse)
+@router.post(
+    "/ingest",
+    response_model=IngestResponse,
+    dependencies=[Depends(require_permission(Permission.INGEST))],
+)
 async def handle_ingest(request: IngestRequest, req: Request) -> IngestResponse:
     start = time.perf_counter()
     logger.info(

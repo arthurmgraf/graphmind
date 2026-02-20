@@ -6,6 +6,9 @@ import enum
 from dataclasses import dataclass
 
 import structlog
+from fastapi import Request
+
+from graphmind.errors import ForbiddenError
 
 logger = structlog.get_logger(__name__)
 
@@ -112,3 +115,25 @@ class RBACRegistry:
         if tenant_id:
             keys = [k for k in keys if k.tenant_id == tenant_id]
         return keys
+
+
+def require_permission(permission: Permission):
+    """FastAPI dependency factory for route-level permission checks.
+
+    Usage::
+
+        @router.post("/ingest", dependencies=[Depends(require_permission(Permission.INGEST))])
+    """
+
+    async def _check(request: Request) -> None:
+        role: Role | None = getattr(request.state, "role", None)
+        if role is None:
+            raise ForbiddenError("No role assigned — authentication may have failed")
+        allowed = _ROLE_PERMISSIONS.get(role, set())
+        if permission not in allowed:
+            raise ForbiddenError(
+                f"Role '{role.value}' lacks permission '{permission.value}'",
+                details={"required": permission.value, "role": role.value},
+            )
+
+    return _check

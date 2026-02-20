@@ -6,7 +6,7 @@ import json
 import time
 
 import structlog
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from graphmind.agents.orchestrator import run_query
@@ -15,6 +15,7 @@ from graphmind.features import FeatureFlagRegistry
 from graphmind.retrieval.response_cache import ResponseCache
 from graphmind.safety.injection_detector import InjectionDetector
 from graphmind.schemas import Citation, QueryRequest, QueryResponse
+from graphmind.security.rbac import Permission, require_permission
 
 _injection_detector = InjectionDetector()
 _feature_flags = FeatureFlagRegistry()
@@ -25,7 +26,11 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1")
 
 
-@router.post("/query", response_model=QueryResponse)
+@router.post(
+    "/query",
+    response_model=QueryResponse,
+    dependencies=[Depends(require_permission(Permission.QUERY))],
+)
 async def handle_query(request: QueryRequest, req: Request) -> QueryResponse:
     logger.info("Received query: %s (engine=%s)", request.question, request.engine)
     start = time.perf_counter()
@@ -161,7 +166,10 @@ async def handle_query(request: QueryRequest, req: Request) -> QueryResponse:
     return response
 
 
-@router.post("/query/stream")
+@router.post(
+    "/query/stream",
+    dependencies=[Depends(require_permission(Permission.QUERY_STREAM))],
+)
 async def handle_query_stream(request: QueryRequest, req: Request) -> StreamingResponse:
     """SSE streaming endpoint for real-time query responses."""
     resources = req.app.state.resources
@@ -212,9 +220,9 @@ async def handle_query_stream(request: QueryRequest, req: Request) -> StreamingR
                 },
             )
 
-        except Exception as exc:
+        except Exception:
             logger.exception("Streaming query failed")
-            yield _sse_event("error", {"message": str(exc)})
+            yield _sse_event("error", {"message": "Query processing failed"})
 
     return StreamingResponse(
         event_generator(),
