@@ -1,7 +1,7 @@
 # ============================================================================
 # GraphMind API � Multi-stage Docker build
 # ============================================================================
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -19,7 +19,7 @@ COPY src/ src/
 RUN uv pip install --no-cache --system --prefix=/install .
 
 # ---------------------------------------------------------------------------
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Non-root user
 RUN groupadd -r graphmind && useradd -r -g graphmind -d /app graphmind
