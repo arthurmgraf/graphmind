@@ -36,7 +36,7 @@ dependencies = [
     "ollama>=0.4.0,<1.0",
     # Document processing
     "unstructured[pdf,md]>=0.16.0,<1.0",
-    "pymupdf>=1.25.0,<2.0",
+    "pymupdf>=1.27.2.2,<2.0",
     # Observability
     "langfuse>=2.56.0,<3.0",
     "opentelemetry-api>=1.28.0,<2.0",
