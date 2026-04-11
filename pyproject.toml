@@ -72,7 +72,7 @@ dev = [
 ]
 eval = [
     "deepeval>=2.0.0",
-    "ragas>=0.2.0",
+    "ragas>=0.4.3",
     "litellm>=1.55.0",
     "datasets>=3.2.0",
 ]
